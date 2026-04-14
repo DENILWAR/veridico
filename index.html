@@ -784,31 +784,94 @@
         ></video>
       </div>
       
-      <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+      <video 
+  id="video"
+  class="screenshot-img"
+  playsinline
+  muted
+  controls
+  preload="auto"
+  poster="img/image4.jpg"
+></video>
 
-      <script>
-        const video = document.getElementById('video');
-        const videoSrc = 'https://pub-8f7217e0293244299df7e00e7b8a697b.r2.dev/master.m3u8';
-      
-        if (video.canPlayType('application/vnd.apple.mpegurl')) {
-          video.src = videoSrc;
-        } else if (Hls.isSupported()) {
-          const hls = new Hls({
-            startLevel: 1, // empieza en 720p
-            maxBufferLength: 30,
-            maxMaxBufferLength: 60,
-            capLevelToPlayerSize: true, // calidad al tamaño real
-            maxBufferSize: 60 * 1000 * 1000 // buffer 
-          });
-      
-          hls.loadSource(videoSrc);
-          hls.attachMedia(video);
-      
-          hls.on(Hls.Events.MANIFEST_PARSED, function () {
-            video.play().catch(() => {});
-          });
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+<script>
+  const video = document.getElementById('video');
+  const videoSrc = 'https://pub-8f7217e0293244299df7e00e7b8a697b.r2.dev/master.m3u8';
+
+  // 🧠 Safari (soporta HLS nativo)
+  if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    video.src = videoSrc;
+
+    video.addEventListener('loadedmetadata', () => {
+      console.log("Safari listo");
+    });
+
+  } 
+  // 🔥 Chrome / Android / otros
+  else if (Hls.isSupported()) {
+
+    const hls = new Hls({
+      startLevel: 1, // empieza en 720p
+      maxBufferLength: 40,
+      maxMaxBufferLength: 80,
+      maxBufferSize: 80 * 1000 * 1000,
+      capLevelToPlayerSize: true,
+      backBufferLength: 30
+    });
+
+    hls.loadSource(videoSrc);
+    hls.attachMedia(video);
+
+    // ✅ Cuando el vídeo está listo
+    hls.on(Hls.Events.MANIFEST_PARSED, () => {
+      console.log("MANIFEST cargado");
+
+      // Intento autoplay (si falla, el usuario usa controls)
+      video.play().catch(() => {
+        console.log("Autoplay bloqueado (normal en móvil)");
+      });
+    });
+
+    // ✅ Debug de carga de segmentos
+    hls.on(Hls.Events.FRAG_LOADED, () => {
+      console.log("Segmento cargado");
+    });
+
+    // ❌ Errores (CLAVE)
+    hls.on(Hls.Events.ERROR, (event, data) => {
+      console.log("HLS ERROR:", data);
+
+      if (data.fatal) {
+        switch (data.type) {
+          case Hls.ErrorTypes.NETWORK_ERROR:
+            console.log("Error de red, reintentando...");
+            hls.startLoad();
+            break;
+
+          case Hls.ErrorTypes.MEDIA_ERROR:
+            console.log("Error de media, recuperando...");
+            hls.recoverMediaError();
+            break;
+
+          default:
+            console.log("Error fatal, destruyendo HLS");
+            hls.destroy();
+            break;
         }
-      </script>
+      }
+    });
+
+    // 🔥 Asegura que el click SIEMPRE funcione
+    video.addEventListener('click', () => {
+      video.play().catch(() => {});
+    });
+  } 
+  else {
+    console.error("HLS no soportado en este navegador");
+  }
+</script>
        <div class="cta-actions reveal reveal-delay-2">
         <a href="https://wa.me/34692257776?text=Buenas%20Denilson,%20quiero%20saber%20cómo%20encagaría%20Veridico%20en%20mi%20gestoría" class="btn-primary">
           Solicitar auditoría gratis
