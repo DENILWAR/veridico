@@ -773,34 +773,36 @@
        <br> Todo en un solo lugar. Sin complicaciones.
        <div class="screenshot-placeholder reveal reveal-delay-1">
         <video 
+          id="video"
           class="screenshot-img"
-          autoplay 
-          muted 
-          loop 
-          playsinline 
-          preload="metadata"
-          poster="img/IMG_1038.jpg"
-        >
-          <source src="img/VSL_final.mp4" type="video/mp4">
-        </video>
+          playsinline
+          muted
+          preload="auto"
+        ></video>
       </div>
       
+      <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+      
       <script>
-        const video = document.querySelector(".screenshot-img");
+        const video = document.getElementById('video');
+        const videoSrc = 'video/index.m3u8';
       
-        const observer = new IntersectionObserver(entries => {
-          if (entries[0].isIntersecting) {
+        if (video.canPlayType('application/vnd.apple.mpegurl')) {
+          video.src = videoSrc;
+        } else if (Hls.isSupported()) {
+          const hls = new Hls({
+            maxBufferLength: 30, // más buffer = menos cortes
+            maxMaxBufferLength: 60
+          });
+      
+          hls.loadSource(videoSrc);
+          hls.attachMedia(video);
+      
+          hls.on(Hls.Events.MANIFEST_PARSED, function () {
             video.play();
-          } else {
-            video.pause();
-          }
-        }, {
-          threshold: 0.3
-        });
-      
-        observer.observe(video);
+          });
+        }
       </script>
-
        <div class="cta-actions reveal reveal-delay-2">
         <a href="https://wa.me/34692257776?text=Buenas%20Denilson,%20quiero%20saber%20cómo%20encagaría%20Veridico%20en%20mi%20gestoría" class="btn-primary">
           Solicitar auditoría gratis
