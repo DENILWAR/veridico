@@ -783,16 +783,6 @@
           poster="img/IMG_1038.jpg"
         ></video>
       </div>
-      
-      <video 
-  id="video"
-  class="screenshot-img"
-  playsinline
-  muted
-  controls
-  preload="auto"
-  poster="img/image4.jpg"
-></video>
 
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
@@ -802,13 +792,21 @@
 
   // 🧠 Safari (soporta HLS nativo)
   if (video.canPlayType('application/vnd.apple.mpegurl')) {
-    video.src = videoSrc;
+  video.src = videoSrc;
 
-    video.addEventListener('loadedmetadata', () => {
-      console.log("Safari listo");
+  video.addEventListener('loadedmetadata', () => {
+    console.log("Safari listo");
+
+    video.play().catch(() => {
+      console.log("Autoplay bloqueado en Safari");
     });
+  });
 
-  } 
+  // 🔥 FORZAR PLAY AL CLICK (CLAVE)
+  video.addEventListener('click', () => {
+    video.play().catch(() => {});
+  });
+}
   // 🔥 Chrome / Android / otros
   else if (Hls.isSupported()) {
 
