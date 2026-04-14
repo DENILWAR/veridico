@@ -777,7 +777,10 @@
           class="screenshot-img"
           playsinline
           muted
+          autoplay
+          controls
           preload="auto"
+          poster="img/IMG_1038.jpg"
         ></video>
       </div>
       
@@ -799,7 +802,9 @@
           hls.attachMedia(video);
       
           hls.on(Hls.Events.MANIFEST_PARSED, function () {
-            video.play();
+          video.play().catch(() => {
+          console.log("Autoplay bloqueado");
+            });
           });
         }
       </script>
