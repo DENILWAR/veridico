@@ -1610,13 +1610,16 @@
         var iframe  = document.getElementById('ytVideo');
         var gate    = document.getElementById('videoConsentGate');
         var muteBtn = document.getElementById('unmuteBtn');
-        if (iframe && iframe.dataset.src && !iframe.src) {
-          iframe.src = iframe.dataset.src;
-        }
-        if (gate)    gate.style.display    = 'none';
+
+      if (iframe && iframe.dataset.src && !iframe.getAttribute    ('src')) {
+      iframe.setAttribute('src', iframe.dataset.src);
+      }
+
+        if (gate) gate.style.display = 'none';
         if (muteBtn) muteBtn.style.display = '';
       }
 
+      
       /* Called from the consent-gate button (onclick="acceptAndPlay()") */
       window.acceptAndPlay = function () {
         setCookie(COOKIE_KEY, 'accepted', 365);
