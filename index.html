@@ -92,6 +92,9 @@
     }
     .nav-logo span { color: var(--green-mid); }
 
+    .nav-cta-wrap {
+      position: relative;
+    }
     .nav-cta {
       font-size: 13px;
       font-weight: 500;
@@ -105,6 +108,27 @@
     .nav-cta:hover {
       background: var(--green-mid);
       color: #fff;
+    }
+    /* Privacy tooltip — visible on hover (desktop) and on focus (keyboard/a11y) */
+    .nav-cta-tooltip {
+      display: none;
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      width: 240px;
+      background: rgba(29,29,31,0.95);
+      color: rgba(255,255,255,0.72);
+      font-size: 11px;
+      line-height: 1.5;
+      padding: 8px 12px;
+      border-radius: 8px;
+      pointer-events: none;
+      z-index: 200;
+      white-space: normal;
+    }
+    .nav-cta-wrap:hover .nav-cta-tooltip,
+    .nav-cta:focus + .nav-cta-tooltip {
+      display: block;
     }
 
     /* ─── HERO ──────────────────────────────────────────────────── */
@@ -705,6 +729,45 @@
   background: rgba(0,0,0,0.9);
 }
 
+.video-consent-gate {
+  position: absolute;
+  inset: 0;
+  background: #0f0f0f;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  z-index: 10;
+  text-align: center;
+  padding: 24px;
+}
+.video-consent-gate svg {
+  width: 48px;
+  height: 48px;
+  opacity: 0.5;
+}
+.video-consent-gate p {
+  font-size: 13px;
+  color: rgba(255,255,255,0.55);
+  line-height: 1.5;
+  max-width: 320px;
+}
+.video-consent-gate button {
+  background: var(--green-mid);
+  color: #fff;
+  border: none;
+  padding: 9px 20px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.2s;
+}
+.video-consent-gate button:hover { background: var(--green-dark); }
+
     /* ─── Responsive ────────────────────────────────────────────── */
     @media (max-width: 860px) {
       #hero {
@@ -914,7 +977,10 @@
   <!-- ─── NAV ──────────────────────────────────────────────────── -->
   <nav id="nav">
     <a class="nav-logo" href="#">Veridico<span>.</span></a>
-    <a class="nav-cta" href="https://wa.me/34692257776?text=Hola%20Denilson,%20me%20encantaría%20conocer%20más%20sobre%20Veridico" target="_blank" rel="noopener">Contactar</a>
+    <span class="nav-cta-wrap">
+      <a class="nav-cta" href="https://wa.me/34692257776?text=Hola%20Denilson,%20me%20encantaría%20conocer%20más%20sobre%20Veridico" target="_blank" rel="noopener">Contactar</a>
+      <span class="nav-cta-tooltip">Tus datos serán tratados por Sistemas Organizados at Network conforme a la Política de Privacidad disponible al pie de esta página.</span>
+    </span>
   </nav>
 
 
@@ -933,10 +999,11 @@
         <div class="hero-actions">
           
           <p class="cta-disclaimer reveal reveal-delay-2">
-            Al contactar por WhatsApp aceptas el tratamiento de tus datos según nuestra
+            Tus datos serán tratados por Sistemas Organizados at Network conforme a nuestra
             <button onclick="openLegal('privacidad')">Política de Privacidad</button>.
-            WhatsApp es un servicio de Meta Platforms Ireland Ltd. con sus propias condiciones de uso.
+            WhatsApp es un servicio de Meta Platforms Ireland Ltd. sujeto a sus propias condiciones.
           </p>
+
           <a href="https://wa.me/34692257776?text=Buenas%20Denilson,%20quiero%20saber%20cómo%20encagaría%20Veridico%20en%20mi%20gestoría" class="btn-primary">
             Solicitar auditoría gratis
           </a>
@@ -991,20 +1058,29 @@
        <br> Todo en un solo lugar. Sin complicaciones.
        <div class="video-container reveal reveal-delay-1">
   
-        <!-- VIDEO -->
-        <iframe
-        id="ytVideo"
-        class="video-iframe"
-        src="https://www.youtube.com/embed/7NFZIXEH6mM?autoplay=1&mute=1&controls=0&modestbranding=1&rel=0&playsinline=1&enablejsapi=1&vq=hd1080"
-        frameborder="0"
-        allow="autoplay; encrypted-media"
-        allowfullscreen
-      ></iframe>
+        <!-- CONSENT GATE: visible until user accepts cookies -->
+        <div class="video-consent-gate" id="videoConsentGate">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <polygon points="10 8 16 12 10 16 10 8" fill="white" stroke="none"/>
+          </svg>
+          <p>Este vídeo usa <strong>youtube-nocookie.com</strong>, el modo de privacidad reforzada de YouTube. Al reproducirlo, Google puede instalar cookies funcionales (VISITOR_INFO1_LIVE, YSC). Ver <button onclick="closeLegal&&openLegal('cookies')" style="background:none;border:none;cursor:pointer;color:rgba(255,255,255,0.6);text-decoration:underline;font:inherit;padding:0;font-size:inherit;">Política de Cookies</button>.</p>
+          <button onclick="acceptAndPlay()">Aceptar y reproducir</button>
+        </div>
 
-        
-      
+        <!-- VIDEO: src vacío hasta consentimiento -->
+        <iframe
+          id="ytVideo"
+          class="video-iframe"
+          data-src="https://www.youtube-nocookie.com/embed/7NFZIXEH6mM?autoplay=1&mute=1&controls=0&modestbranding=1&rel=0&playsinline=1&enablejsapi=1&vq=hd1080"
+          src=""
+          frameborder="0"
+          allow="autoplay; encrypted-media"
+          allowfullscreen
+        ></iframe>
+
         <!-- BOTÓN CUSTOM -->
-        <button id="unmuteBtn" class="unmute-btn">
+        <button id="unmuteBtn" class="unmute-btn" style="display:none;">
           🔊 Activar sonido
         </button>
       
@@ -1035,9 +1111,9 @@
           Solicitar auditoría gratis
         </a>
         <p class="cta-disclaimer reveal reveal-delay-2">
-          Al contactar por WhatsApp aceptas el tratamiento de tus datos según nuestra
+          Tus datos serán tratados por Sistemas Organizados at Network conforme a nuestra
           <button onclick="openLegal('privacidad')">Política de Privacidad</button>.
-          WhatsApp es un servicio de Meta Platforms Ireland Ltd. con sus propias condiciones de uso.
+          WhatsApp es un servicio de Meta Platforms Ireland Ltd. sujeto a sus propias condiciones.
         </p>
     </div>
       <div class="screenshots-grid">
@@ -1209,10 +1285,10 @@
           </a>
       </div>
       <p class="cta-disclaimer reveal reveal-delay-2">
-        Al contactar por WhatsApp aceptas el tratamiento de tus datos según nuestra
-        <button onclick="openLegal('privacidad')">Política de Privacidad</button>.
-        WhatsApp es un servicio de Meta Platforms Ireland Ltd. con sus propias condiciones de uso.
-      </p>
+          Tus datos serán tratados por Sistemas Organizados at Network conforme a nuestra
+          <button onclick="openLegal('privacidad')">Política de Privacidad</button>.
+          WhatsApp es un servicio de Meta Platforms Ireland Ltd. sujeto a sus propias condiciones.
+        </p>
       <p class="cta-sub reveal reveal-delay-1">
         Deja de perder tiempo. Empieza a optimizar tu negocio.
       </p>
@@ -1239,7 +1315,7 @@
   <!-- ─── COOKIE BANNER ───────────────────────────────────────────── -->
   <div class="cookie-banner" id="cookieBanner" role="dialog" aria-label="Aviso de cookies">
     <p>
-      Esta web utiliza cookies técnicas estrictamente necesarias para su funcionamiento. No utilizamos cookies de análisis ni publicidad.
+      Esta web usa cookies técnicas propias. Si acepta todas, también se activa el vídeo de YouTube (youtube-nocookie.com), que puede instalar cookies funcionales de Google. Si elige «Solo esenciales», el vídeo no se cargará.
       Más información en nuestra <button onclick="openLegal('cookies')" style="background:none;border:none;cursor:pointer;color:var(--green);text-decoration:underline;font:inherit;padding:0;">Política de Cookies</button>.
     </p>
     <div class="cookie-banner-actions">
@@ -1261,7 +1337,8 @@
         <p>En cumplimiento del artículo 10 de la Ley 34/2002, de 11 de julio, de Servicios de la Sociedad de la Información y de Comercio Electrónico (LSSI-CE), se pone en conocimiento de los usuarios la siguiente información:</p>
         <p><strong>Denilson Arnau Capa</strong>, con NIF <strong>47929828J</strong>, es el titular del sitio web veridico.son.enterprises y actúa bajo el nombre comercial <strong>Sistemas Organizados at Network</strong> (en adelante, «<strong>Sistemas Organizados at Network</strong>» o «el Titular»).</p>
         <ul>
-          <li><strong>Domicilio:</strong>  Mare de Deu de Fátima, 31, 08191, Rubí, Barcelona, España</li>
+          <li><strong>Domicilio:</strong> Mare de Deu de Fátima, 31, 08191, Rubí, Barcelona, España</li>
+          <li><strong>Teléfono:</strong> +34 692 257 776</li>
           <li><strong>Correo electrónico:</strong> <a href="mailto:bussiness@denilsonarnau.com">bussiness@denilsonarnau.com</a></li>
           <li><strong>Sitio web:</strong> veridico.son.enterprises</li>
         </ul>
@@ -1363,7 +1440,7 @@
         <p>El responsable del uso de cookies en veridico.son.enterprises es Sistemas Organizados at Network (titular: Denilson Arnau Capa, NIF 47929828J). Contacto: <a href="mailto:bussiness@denilsonarnau.com">bussiness@denilsonarnau.com</a>.</p>
 
         <h3>3. Cookies utilizadas en este sitio web</h3>
-        <p>Este sitio web únicamente utiliza cookies técnicas estrictamente necesarias para su correcto funcionamiento. No se emplean cookies de análisis, publicidad, perfilado ni de terceros.</p>
+        <p>Por defecto, este sitio web solo instala una cookie técnica propia. Si el usuario acepta expresamente las cookies, se carga un vídeo alojado en <strong>youtube-nocookie.com</strong> (dominio de privacidad reforzada de YouTube/Google), que puede instalar cookies de terceros de carácter funcional conforme a la <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Política de Privacidad de Google</a>. No se utilizan cookies de análisis, publicidad ni perfilado.</p>
         <table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:8px;">
           <thead>
             <tr style="border-bottom:1px solid var(--border);">
@@ -1379,6 +1456,21 @@
               <td style="padding:6px 4px;color:var(--ink-2);">Almacena la preferencia del usuario sobre el aviso de cookies</td>
               <td style="padding:6px 4px;color:var(--ink-2);">365 días</td>
               <td style="padding:6px 4px;color:var(--ink-2);">Propia · Técnica</td>
+            </tr>
+            <tr style="border-top:1px solid var(--border);">
+              <td colspan="4" style="padding:8px 4px 4px;color:var(--ink-3);font-size:12px;font-style:italic;">Solo si el usuario acepta las cookies — instadas por youtube-nocookie.com (Google LLC):</td>
+            </tr>
+            <tr>
+              <td style="padding:6px 4px;color:var(--ink-2);">VISITOR_INFO1_LIVE</td>
+              <td style="padding:6px 4px;color:var(--ink-2);">Estima el ancho de banda del usuario para optimizar la reproducción del vídeo</td>
+              <td style="padding:6px 4px;color:var(--ink-2);">~180 días</td>
+              <td style="padding:6px 4px;color:var(--ink-2);">Tercero · Funcional</td>
+            </tr>
+            <tr>
+              <td style="padding:6px 4px;color:var(--ink-2);">YSC</td>
+              <td style="padding:6px 4px;color:var(--ink-2);">Registra un identificador único de sesión de reproducción en YouTube</td>
+              <td style="padding:6px 4px;color:var(--ink-2);">Sesión</td>
+              <td style="padding:6px 4px;color:var(--ink-2);">Tercero · Funcional</td>
             </tr>
           </tbody>
         </table>
@@ -1504,7 +1596,7 @@
       function setCookie(name, value, days) {
         var expires = new Date(Date.now() + days * 864e5).toUTCString();
         document.cookie = name + '=' + encodeURIComponent(value) +
-          '; expires=' + expires + '; path=/; SameSite=Lax';
+          '; expires=' + expires + '; path=/; SameSite=Lax; Secure';
       }
 
       function hideBanner() {
@@ -1513,19 +1605,43 @@
 
       var banner = document.getElementById('cookieBanner');
 
-      if (!getCookie(COOKIE_KEY)) {
-        // Show banner after short delay so page renders first
+      /* ── YouTube deferred load ── */
+      function loadYouTubeVideo() {
+        var iframe  = document.getElementById('ytVideo');
+        var gate    = document.getElementById('videoConsentGate');
+        var muteBtn = document.getElementById('unmuteBtn');
+        if (iframe && iframe.dataset.src && !iframe.src) {
+          iframe.src = iframe.dataset.src;
+        }
+        if (gate)    gate.style.display    = 'none';
+        if (muteBtn) muteBtn.style.display = '';
+      }
+
+      /* Called from the consent-gate button (onclick="acceptAndPlay()") */
+      window.acceptAndPlay = function () {
+        setCookie(COOKIE_KEY, 'accepted', 365);
+        hideBanner();
+        loadYouTubeVideo();
+      };
+
+      /* If user already accepted in a previous visit → load video immediately */
+      if (getCookie(COOKIE_KEY) === 'accepted') {
+        loadYouTubeVideo();
+      } else if (!getCookie(COOKIE_KEY)) {
         setTimeout(function () { banner.classList.add('visible'); }, 800);
       }
+      /* If 'essential': banner stays hidden, gate stays visible — correct */
 
       document.getElementById('cookieAccept').addEventListener('click', function () {
         setCookie(COOKIE_KEY, 'accepted', 365);
         hideBanner();
+        loadYouTubeVideo();
       });
 
       document.getElementById('cookieReject').addEventListener('click', function () {
         setCookie(COOKIE_KEY, 'essential', 365);
         hideBanner();
+        /* Gate remains visible: user chose not to accept third-party cookies */
       });
 
     }());
