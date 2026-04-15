@@ -729,6 +729,184 @@
       .hero-title        { letter-spacing: -2.5px; }
       #hero              { padding: 100px 20px 40px; }
     }
+
+    /* ─── LEGAL MODALS ──────────────────────────────────────────── */
+    .legal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 400;
+      background: rgba(0,0,0,0.45);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .legal-overlay.open { display: flex; }
+    .legal-modal {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      max-width: 680px;
+      width: 100%;
+      max-height: 82vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.18);
+      overflow: hidden;
+    }
+    .legal-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 28px 16px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .legal-modal-header h2 {
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--ink);
+      letter-spacing: -0.3px;
+    }
+    .legal-modal-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--ink-3);
+      font-size: 22px;
+      line-height: 1;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .legal-modal-close:hover { background: var(--off-white); color: var(--ink); }
+    .legal-modal-body {
+      overflow-y: auto;
+      padding: 24px 28px 32px;
+      font-size: 14px;
+      color: var(--ink-2);
+      line-height: 1.7;
+    }
+    .legal-modal-body h3 {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--ink);
+      margin: 24px 0 8px;
+    }
+    .legal-modal-body h3:first-child { margin-top: 0; }
+    .legal-modal-body p { margin-bottom: 10px; }
+    .legal-modal-body a { color: var(--green-mid); text-decoration: none; }
+    .legal-modal-body a:hover { text-decoration: underline; }
+    .legal-modal-body ul { padding-left: 20px; margin-bottom: 10px; }
+    .legal-modal-body li { margin-bottom: 4px; }
+
+    /* ─── COOKIE BANNER ─────────────────────────────────────────── */
+    .cookie-banner {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      z-index: 300;
+      background: rgba(29,29,31,0.97);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      transform: translateY(100%);
+      transition: transform 0.4s var(--transition);
+    }
+    .cookie-banner.visible { transform: translateY(0); }
+    .cookie-banner p {
+      font-size: 13px;
+      color: rgba(255,255,255,0.78);
+      line-height: 1.5;
+      flex: 1;
+      min-width: 220px;
+    }
+    .cookie-banner p a {
+      color: var(--green);
+      text-decoration: underline;
+      cursor: pointer;
+      background: none;
+      border: none;
+      font: inherit;
+      padding: 0;
+    }
+    .cookie-banner-actions {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .cookie-btn-accept {
+      background: var(--green-mid);
+      color: #fff;
+      border: none;
+      padding: 8px 18px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .cookie-btn-accept:hover { background: var(--green-dark); }
+    .cookie-btn-reject {
+      background: rgba(255,255,255,0.10);
+      color: rgba(255,255,255,0.72);
+      border: 1px solid rgba(255,255,255,0.18);
+      padding: 8px 18px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .cookie-btn-reject:hover { background: rgba(255,255,255,0.18); }
+
+    /* ─── FOOTER LEGAL LINKS ─────────────────────────────────────── */
+    .footer-legal {
+      max-width: 980px;
+      margin: 12px auto 0;
+      padding: 12px 24px 0;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .footer-legal-link {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 11px;
+      color: var(--ink-4);
+      padding: 0;
+      text-decoration: none;
+      transition: color 0.2s;
+      font-family: inherit;
+    }
+    .footer-legal-link:hover { color: var(--ink-2); }
+
+    /* ─── WHATSAPP DISCLAIMER ────────────────────────────────────── */
+    .cta-disclaimer {
+      font-size: 11px;
+      color: var(--ink-3);
+      margin-top: 14px;
+      line-height: 1.5;
+    }
+    .cta-disclaimer button {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: inherit;
+      font: inherit;
+      text-decoration: underline;
+      padding: 0;
+    }
   </style>
 </head>
 <body>
@@ -1018,6 +1196,11 @@
             Solicitar auditoría gratis
           </a>
       </div>
+      <p class="cta-disclaimer reveal reveal-delay-2">
+        Al contactar por WhatsApp aceptas el tratamiento de tus datos según nuestra
+        <button onclick="openLegal('privacidad')">Política de Privacidad</button>.
+        WhatsApp es un servicio de Meta Platforms Ireland Ltd. con sus propias condiciones de uso.
+      </p>
       <p class="cta-sub reveal reveal-delay-1">
         Deja de perder tiempo. Empieza a optimizar tu negocio.
       </p>
@@ -1033,7 +1216,156 @@
         © 2026 Sistemas Organizados at Network. Todos los derechos reservados.
       </span>
     </div>
+    <div class="footer-legal">
+      <button class="footer-legal-link" onclick="openLegal('aviso')">Aviso Legal</button>
+      <button class="footer-legal-link" onclick="openLegal('privacidad')">Política de Privacidad</button>
+      <button class="footer-legal-link" onclick="openLegal('cookies')">Política de Cookies</button>
+    </div>
   </footer>
+
+
+  <!-- ─── COOKIE BANNER ───────────────────────────────────────────── -->
+  <div class="cookie-banner" id="cookieBanner" role="dialog" aria-label="Aviso de cookies">
+    <p>
+      Esta web utiliza cookies técnicas estrictamente necesarias para su funcionamiento. No utilizamos cookies de análisis ni publicidad.
+      Más información en nuestra <button onclick="openLegal('cookies')" style="background:none;border:none;cursor:pointer;color:var(--green);text-decoration:underline;font:inherit;padding:0;">Política de Cookies</button>.
+    </p>
+    <div class="cookie-banner-actions">
+      <button class="cookie-btn-reject" id="cookieReject">Solo esenciales</button>
+      <button class="cookie-btn-accept" id="cookieAccept">Aceptar</button>
+    </div>
+  </div>
+
+
+  <!-- ─── MODAL: AVISO LEGAL ──────────────────────────────────────── -->
+  <div class="legal-overlay" id="modal-aviso" role="dialog" aria-modal="true" aria-labelledby="aviso-title">
+    <div class="legal-modal">
+      <div class="legal-modal-header">
+        <h2 id="aviso-title">Aviso Legal</h2>
+        <button class="legal-modal-close" onclick="closeLegal('aviso')" aria-label="Cerrar">&#x2715;</button>
+      </div>
+      <div class="legal-modal-body">
+        <h3>1. Datos identificativos del titular</h3>
+        <p>En cumplimiento del artículo 10 de la Ley 34/2002, de 11 de julio, de Servicios de la Sociedad de la Información y de Comercio Electrónico (LSSI-CE), se informa de los siguientes datos identificativos:</p>
+        <ul>
+          <li><strong>Razón social:</strong> Sistemas Organizados at Network</li>
+          <li><strong>NIF:</strong> 47929828J</li>
+          <li><strong>Domicilio:</strong> [DIRECCIÓN COMPLETA]</li>
+          <li><strong>Correo electrónico:</strong> <a href="mailto:bussiness@denilsonarnau.com">bussiness@denilsonarnau.com</a></li>
+          <li><strong>Sitio web:</strong> veridico.son.enterprises</li>
+        </ul>
+
+        <h3>2. Objeto y ámbito de aplicación</h3>
+        <p>El presente Aviso Legal regula el acceso, navegación y uso del sitio web veridico.son.enterprises (en adelante, "el Sitio Web"). El acceso y uso del Sitio Web implica la aceptación plena y sin reservas de todas las disposiciones incluidas en este Aviso Legal.</p>
+
+        <h3>3. Propiedad intelectual e industrial</h3>
+        <p>Todos los contenidos del Sitio Web (textos, imágenes, logotipos, diseño gráfico, código fuente y demás elementos) son propiedad de Sistemas Organizados at Network o de terceros que han autorizado su uso, y están protegidos por la legislación española e internacional sobre propiedad intelectual e industrial.</p>
+        <p>Queda prohibida su reproducción, distribución, comunicación pública o transformación sin autorización expresa del titular.</p>
+
+        <h3>4. Limitación de responsabilidad</h3>
+        <p>Sistemas Organizados at Network no se hace responsable de los daños o perjuicios derivados del uso del Sitio Web, del acceso a los contenidos enlazados o de la interrupción del servicio por causas ajenas a su control.</p>
+
+        <h3>5. Legislación aplicable y jurisdicción</h3>
+        <p>Las relaciones entre el titular y los usuarios del Sitio Web se rigen por la legislación española vigente. Para la resolución de conflictos, las partes se someten a los Juzgados y Tribunales competentes conforme a la normativa aplicable.</p>
+
+        <h3>6. Modificaciones</h3>
+        <p>Sistemas Organizados at Network se reserva el derecho de modificar, en cualquier momento y sin previo aviso, los términos del presente Aviso Legal. Última actualización: abril de 2026.</p>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ─── MODAL: POLÍTICA DE PRIVACIDAD ──────────────────────────── -->
+  <div class="legal-overlay" id="modal-privacidad" role="dialog" aria-modal="true" aria-labelledby="privacidad-title">
+    <div class="legal-modal">
+      <div class="legal-modal-header">
+        <h2 id="privacidad-title">Política de Privacidad</h2>
+        <button class="legal-modal-close" onclick="closeLegal('privacidad')" aria-label="Cerrar">&#x2715;</button>
+      </div>
+      <div class="legal-modal-body">
+        <h3>1. Responsable del tratamiento</h3>
+        <ul>
+          <li><strong>Responsable:</strong> Denil Arnau / Sistemas Organizados at Network</li>
+          <li><strong>Correo electrónico:</strong> <a href="mailto:bussiness@denilsonarnau.com">bussiness@denilsonarnau.com</a></li>
+        </ul>
+
+        <h3>2. Finalidad del tratamiento</h3>
+        <p>Los datos personales facilitados a través del canal de contacto (WhatsApp u otros medios) se tratan con la siguiente finalidad:</p>
+        <ul>
+          <li>Atender consultas comerciales y solicitudes de información sobre los servicios de Veridico.</li>
+          <li>Gestionar la relación precontractual y/o contractual con clientes o potenciales clientes.</li>
+        </ul>
+
+        <h3>3. Base jurídica del tratamiento</h3>
+        <ul>
+          <li><strong>Interés legítimo</strong> (art. 6.1.f RGPD): para atender consultas comerciales.</li>
+          <li><strong>Ejecución de un contrato</strong> (art. 6.1.b RGPD): cuando el tratamiento es necesario para la prestación del servicio solicitado.</li>
+          <li><strong>Consentimiento</strong> (art. 6.1.a RGPD): en los casos en que se solicite expresamente.</li>
+        </ul>
+
+        <h3>4. Conservación de los datos</h3>
+        <p>Los datos se conservarán durante el tiempo estrictamente necesario para atender la solicitud y, en su caso, durante los plazos legales de prescripción de responsabilidades.</p>
+
+        <h3>5. Destinatarios</h3>
+        <p>Los datos no serán cedidos a terceros, salvo obligación legal. En el caso del contacto por WhatsApp, los datos son tratados también por Meta Platforms Ireland Ltd. conforme a su propia política de privacidad, sobre la cual Sistemas Organizados at Network no tiene control.</p>
+
+        <h3>6. Derechos del interesado</h3>
+        <p>Usted puede ejercer en cualquier momento los siguientes derechos reconocidos por el RGPD y la LOPDGDD:</p>
+        <ul>
+          <li><strong>Acceso:</strong> conocer qué datos personales tratamos sobre usted.</li>
+          <li><strong>Rectificación:</strong> solicitar la corrección de datos inexactos.</li>
+          <li><strong>Supresión:</strong> solicitar la eliminación de sus datos («derecho al olvido»).</li>
+          <li><strong>Oposición:</strong> oponerse al tratamiento de sus datos.</li>
+          <li><strong>Limitación:</strong> solicitar la restricción del tratamiento.</li>
+          <li><strong>Portabilidad:</strong> recibir sus datos en un formato estructurado y legible.</li>
+        </ul>
+        <p>Para ejercer estos derechos, diríjase a <a href="mailto:bussiness@denilsonarnau.com">bussiness@denilsonarnau.com</a> indicando el derecho que desea ejercitar y adjuntando documento que acredite su identidad.</p>
+
+        <h3>7. Reclamación ante la AEPD</h3>
+        <p>Si considera que el tratamiento de sus datos infringe la normativa, tiene derecho a presentar una reclamación ante la Agencia Española de Protección de Datos (<a href="https://www.aepd.es" target="_blank" rel="noopener noreferrer">www.aepd.es</a>).</p>
+
+        <h3>8. Modificaciones</h3>
+        <p>Esta política puede actualizarse para adaptarse a cambios legislativos o de negocio. Última actualización: abril de 2026.</p>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ─── MODAL: POLÍTICA DE COOKIES ─────────────────────────────── -->
+  <div class="legal-overlay" id="modal-cookies" role="dialog" aria-modal="true" aria-labelledby="cookies-title">
+    <div class="legal-modal">
+      <div class="legal-modal-header">
+        <h2 id="cookies-title">Política de Cookies</h2>
+        <button class="legal-modal-close" onclick="closeLegal('cookies')" aria-label="Cerrar">&#x2715;</button>
+      </div>
+      <div class="legal-modal-body">
+        <h3>1. ¿Qué son las cookies?</h3>
+        <p>Las cookies son pequeños archivos de texto que un sitio web almacena en su dispositivo cuando lo visita. Permiten que el sitio recuerde sus preferencias y mejore su experiencia de navegación.</p>
+
+        <h3>2. Cookies utilizadas en este sitio web</h3>
+        <p>Este sitio web únicamente utiliza cookies técnicas estrictamente necesarias para su funcionamiento:</p>
+        <ul>
+          <li><strong>cookie_consent</strong> — Almacena su preferencia sobre el aviso de cookies. Duración: 365 días. Tipo: propia, técnica.</li>
+        </ul>
+        <p>No se utilizan cookies de análisis, publicidad, redes sociales ni de terceros.</p>
+
+        <h3>3. ¿Cómo gestionar o eliminar las cookies?</h3>
+        <p>Puede configurar su navegador para rechazar, eliminar o bloquear las cookies en cualquier momento. Tenga en cuenta que deshabilitar cookies técnicas puede afectar al funcionamiento del sitio.</p>
+        <ul>
+          <li><a href="https://support.google.com/chrome/answer/95647" target="_blank" rel="noopener noreferrer">Google Chrome</a></li>
+          <li><a href="https://support.mozilla.org/es/kb/habilitar-y-deshabilitar-cookies-sitios-web-rastrear-preferencias" target="_blank" rel="noopener noreferrer">Mozilla Firefox</a></li>
+          <li><a href="https://support.apple.com/es-es/guide/safari/sfri11471/mac" target="_blank" rel="noopener noreferrer">Safari</a></li>
+          <li><a href="https://support.microsoft.com/es-es/microsoft-edge/eliminar-las-cookies-en-microsoft-edge-63947406-40ac-c3b8-57b9-2a946a29ae09" target="_blank" rel="noopener noreferrer">Microsoft Edge</a></li>
+        </ul>
+
+        <h3>4. Base legal</h3>
+        <p>El uso de cookies técnicas estrictamente necesarias no requiere consentimiento previo (art. 22.2 LSSI-CE, Guía de Cookies AEPD 2023). Para cualquier otra categoría de cookie, se solicitaría consentimiento explícito antes de su activación.</p>
+
+        <h3>5. Más información</h3>
+        <p>Para cualquier consulta sobre el uso de cookies, puede contactar en <a href="mailto:bussiness@denilsonarnau.com">bussiness@denilsonarnau.com</a>. Última actualización: abril de 2026.</p>
+      </div>
+    </div>
+  </div>
 
 
   <!-- ─── Scroll Animations ─────────────────────────────────────── -->
@@ -1076,6 +1408,91 @@
           applyFavicon(e.matches);
         });
       }());
+
+    }());
+  </script>
+
+  <!-- ─── Legal Modals & Cookie Banner JS ──────────────────────── -->
+  <script>
+    (function () {
+      'use strict';
+
+      /* ── Modal helpers ── */
+      function openLegal(id) {
+        var overlay = document.getElementById('modal-' + id);
+        if (!overlay) return;
+        overlay.classList.add('open');
+        document.body.style.overflow = 'hidden';
+        // Focus close button for accessibility
+        var btn = overlay.querySelector('.legal-modal-close');
+        if (btn) { setTimeout(function () { btn.focus(); }, 50); }
+      }
+
+      function closeLegal(id) {
+        var overlay = document.getElementById('modal-' + id);
+        if (!overlay) return;
+        overlay.classList.remove('open');
+        document.body.style.overflow = '';
+      }
+
+      // Close on overlay click (outside the modal card)
+      document.querySelectorAll('.legal-overlay').forEach(function (overlay) {
+        overlay.addEventListener('click', function (e) {
+          if (e.target === overlay) {
+            overlay.classList.remove('open');
+            document.body.style.overflow = '';
+          }
+        });
+      });
+
+      // Close on Escape key
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+          document.querySelectorAll('.legal-overlay.open').forEach(function (o) {
+            o.classList.remove('open');
+          });
+          document.body.style.overflow = '';
+        }
+      });
+
+      // Expose openLegal globally (used by inline onclick)
+      window.openLegal  = openLegal;
+      window.closeLegal = closeLegal;
+
+      /* ── Cookie banner ── */
+      var COOKIE_KEY = 'cookie_consent';
+
+      function getCookie(name) {
+        var match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+        return match ? decodeURIComponent(match[1]) : null;
+      }
+
+      function setCookie(name, value, days) {
+        var expires = new Date(Date.now() + days * 864e5).toUTCString();
+        document.cookie = name + '=' + encodeURIComponent(value) +
+          '; expires=' + expires + '; path=/; SameSite=Lax';
+      }
+
+      function hideBanner() {
+        banner.classList.remove('visible');
+      }
+
+      var banner = document.getElementById('cookieBanner');
+
+      if (!getCookie(COOKIE_KEY)) {
+        // Show banner after short delay so page renders first
+        setTimeout(function () { banner.classList.add('visible'); }, 800);
+      }
+
+      document.getElementById('cookieAccept').addEventListener('click', function () {
+        setCookie(COOKIE_KEY, 'accepted', 365);
+        hideBanner();
+      });
+
+      document.getElementById('cookieReject').addEventListener('click', function () {
+        setCookie(COOKIE_KEY, 'essential', 365);
+        hideBanner();
+      });
 
     }());
   </script>
