@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en" data-title-key="xp.meta_title">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Verídico Intelligence — Demo environment</title>
+  <meta name="description" content="Interactive Verídico Intelligence demo: work in a simulated CRM and watch Verídico discover a recurring workflow." />
+  <meta name="robots" content="noindex" />
+  <meta name="theme-color" content="#ffffff" />
+  <link id="favicon" rel="icon" type="image/svg+xml" href="img/logoblack.svg" />
+  <script>
+    (function () {
+      if (new URLSearchParams(location.search).get('entry') === 'portal') document.documentElement.classList.add('portal-boot');
+    })();
+  </script>
+  <link rel="stylesheet" href="assets/css/tokens.css" />
+  <link rel="stylesheet" href="assets/css/experience.css" />
+  <script type="module" src="assets/js/demo/app.js"></script>
+</head>
+<body class="xp">
+  <div class="portal" id="portal" aria-hidden="true"></div>
+  <a class="skip" href="#xpMain" data-i18n="a11y.skip">Skip to content</a>
+
+  <header class="xp-top">
+    <a class="brand" href="index.html" data-i18n-attr="aria-label:xp.back_landing"><span>Verídico<span class="dot">.</span></span><span class="pill">Intelligence</span></a>
+    <span class="badge" data-status="demo" data-i18n="xp.demo_env">Demo environment</span>
+    <span class="xp-company"><b>Nova Administration S.L.</b><span class="badge" data-status="demo" data-i18n="xp.demo_company">Demo company</span></span>
+    <div class="xp-status" id="xpStatus" hidden>
+      <span class="live-dot" aria-hidden="true"></span>
+      <span id="xpStatusLabel"></span>
+      <span class="sep">·</span><span id="xpClock" class="mono">00:00</span>
+      <span class="sep">·</span><span id="xpEvents"></span>
+    </div>
+    <div class="xp-top-right">
+      <button type="button" class="btn btn-ghost btn-sm" id="xpEnd" hidden data-i18n="xp.end_session">End session</button>
+      <div id="langSwitch"></div>
+      <a class="btn btn-ghost btn-sm" href="index.html" data-i18n="xp.exit">Exit demo</a>
+    </div>
+  </header>
+
+  <div class="xp-body">
+    <nav class="xp-nav" id="xpNav" data-i18n-attr="aria-label:xp.nav_label">
+      <span class="nav-title">VERÍDICO INTELLIGENCE</span>
+      <button type="button" data-view="overview"><span data-i18n="nav.overview">Overview</span></button>
+      <button type="button" data-view="session"><span data-i18n="nav.session">Session</span><i class="nav-live" aria-hidden="true"></i></button>
+      <button type="button" data-view="workflows"><span data-i18n="nav.workflows">Workflows</span><i class="nav-new" aria-hidden="true"></i></button>
+      <button type="button" data-view="recommendations"><span data-i18n="nav.recommendations">Recommendations</span><i class="nav-new" aria-hidden="true"></i></button>
+      <button type="button" data-view="intelligence"><span data-i18n="nav.intelligence">Intelligence</span></button>
+      <button type="button" data-view="sources"><span data-i18n="nav.sources">Sources</span></button>
+      <span class="nav-sep"></span>
+      <button type="button" data-view="summary"><span data-i18n="nav.summary">Session summary</span></button>
+      <div class="nav-foot" id="navFoot"></div>
+    </nav>
+
+    <main class="xp-main" id="xpMain" tabindex="-1">
+      <section class="view" id="view-overview" data-view="overview"></section>
+      <section class="view" id="view-session" data-view="session">
+        <div class="desk-wrap" id="deskWrap">
+          <div class="desktop" id="desktop" data-i18n-attr="aria-label:xp.desktop_label" role="application">
+            <div class="desk-mark" aria-hidden="true"><span>SON Workspace</span><small class="badge" data-status="demo" data-i18n="xp.demo_env">Demo environment</small></div>
+          </div>
+          <nav class="dock" id="dock" data-i18n-attr="aria-label:xp.dock_label"></nav>
+          <div class="observer" id="observer"></div>
+          <div class="moment" id="moment" hidden></div>
+          <div class="desk-gate" id="deskGate" hidden></div>
+        </div>
+        <div class="mobile-note" id="mobileNote"></div>
+      </section>
+      <section class="view" id="view-workflows" data-view="workflows"></section>
+      <section class="view" id="view-recommendations" data-view="recommendations"></section>
+      <section class="view" id="view-intelligence" data-view="intelligence"></section>
+      <section class="view" id="view-sources" data-view="sources"></section>
+      <section class="view" id="view-summary" data-view="summary"></section>
+    </main>
+  </div>
+</body>
+</html>
