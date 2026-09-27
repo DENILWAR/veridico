@@ -1,0 +1,198 @@
+/* ─── Verídico design tokens ─────────────────────────────────────
+   Canonical brand green: #34C759 (from the original Verídico site).
+   Components must reference these tokens, never raw hex values. */
+:root {
+  --veridico-green:        #34C759;
+  --veridico-green-hover:  #2AAF4A;
+  --veridico-green-ink:    #17722F;              /* green text on white (AA) */
+  --veridico-green-soft:   rgba(52, 199, 89, 0.10);
+  --veridico-green-border: rgba(52, 199, 89, 0.38);
+  --veridico-green-glow:   rgba(52, 199, 89, 0.30);
+
+  --surface:    #ffffff;
+  --surface-2:  #f6f7f6;
+  --surface-3:  #eef0ee;
+  --ink:        #0c110e;
+  --ink-2:      #333a35;
+  --ink-3:      #5f6862;
+  --ink-4:      #8f978f;
+  --line:       rgba(12, 17, 14, 0.08);
+  --line-2:     rgba(12, 17, 14, 0.14);
+  --line-3:     rgba(12, 17, 14, 0.22);
+
+  --radius-sm: 8px;
+  --radius:    12px;
+  --radius-lg: 18px;
+  --shadow-1:  0 1px 2px rgba(12, 17, 14, 0.04), 0 1px 1px rgba(12, 17, 14, 0.03);
+  --shadow-2:  0 12px 32px -12px rgba(12, 17, 14, 0.18), 0 2px 6px rgba(12, 17, 14, 0.04);
+  --ease:      cubic-bezier(0.22, 0.61, 0.36, 1);
+
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Status system */
+  --st-real-fg: #0c110e;        --st-real-bg: #eef0ee;        --st-real-bd: rgba(12,17,14,.18);
+  --st-demo-fg: #7a4f00;        --st-demo-bg: #fff5de;        --st-demo-bd: rgba(170,120,0,.30);
+  --st-conn-fg: var(--veridico-green-ink); --st-conn-bg: var(--veridico-green-soft); --st-conn-bd: var(--veridico-green-border);
+  --st-nc-fg:   #6b3a3a;        --st-nc-bg:   #f8eeee;        --st-nc-bd:   rgba(140,60,60,.22);
+  --st-plan-fg: #2f4a63;        --st-plan-bg: #edf2f7;        --st-plan-bd: rgba(47,74,99,.22);
+  --st-exp-fg:  #7a3e00;        --st-exp-bg:  #fdeee0;        --st-exp-bd:  rgba(160,80,0,.25);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  font-family: var(--font);
+  background: var(--surface);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.5;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+a { color: inherit; }
+::selection { background: var(--veridico-green-glow); }
+:focus-visible { outline: 2px solid var(--veridico-green-ink); outline-offset: 2px; border-radius: 4px; }
+[hidden] { display: none !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+/* ─── Status badge (REAL / DEMO / CONNECTED / NOT CONNECTED / PLANNED / EXPERIMENTAL) */
+.badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--mono); font-size: 10px; font-weight: 600;
+  letter-spacing: 0.9px; text-transform: uppercase; line-height: 1;
+  padding: 4px 7px; border-radius: 999px; white-space: nowrap;
+  border: 1px solid var(--st-real-bd); background: var(--st-real-bg); color: var(--st-real-fg);
+}
+.badge::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: .8; }
+.badge[data-status="demo"]          { color: var(--st-demo-fg); background: var(--st-demo-bg); border-color: var(--st-demo-bd); }
+.badge[data-status="connected"]     { color: var(--st-conn-fg); background: var(--st-conn-bg); border-color: var(--st-conn-bd); }
+.badge[data-status="connected"]::before { background: var(--veridico-green); opacity: 1; }
+.badge[data-status="not_connected"] { color: var(--st-nc-fg);   background: var(--st-nc-bg);   border-color: var(--st-nc-bd); }
+.badge[data-status="not_connected"]::before { background: transparent; border: 1px solid currentColor; }
+.badge[data-status="planned"]       { color: var(--st-plan-fg); background: var(--st-plan-bg); border-color: var(--st-plan-bd); }
+.badge[data-status="planned"]::before { background: transparent; border: 1px dashed currentColor; }
+.badge[data-status="experimental"]  { color: var(--st-exp-fg);  background: var(--st-exp-bg);  border-color: var(--st-exp-bd); }
+.badge[data-status="estimate"]      { color: var(--ink-3); background: var(--surface-2); border-color: var(--line-2); }
+
+/* ─── Buttons */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 12px 22px; border-radius: 999px; border: 1px solid transparent;
+  font-size: 15px; font-weight: 600; letter-spacing: -0.01em; text-decoration: none;
+  cursor: pointer; white-space: nowrap;
+  transition: background .2s, border-color .2s, color .2s, box-shadow .25s var(--ease), transform .25s var(--ease);
+}
+.btn svg { width: 16px; height: 16px; flex: none; }
+.btn-primary { background: var(--veridico-green); color: #04150a; box-shadow: 0 6px 20px -8px var(--veridico-green-glow); }
+.btn-primary:hover { background: var(--veridico-green-hover); transform: translateY(-1px); box-shadow: 0 0 0 5px var(--veridico-green-soft), 0 10px 26px -10px var(--veridico-green-glow); }
+.btn-dark { background: var(--ink); color: #fff; }
+.btn-dark:hover { background: #222a25; transform: translateY(-1px); }
+.btn-ghost { background: var(--surface); color: var(--ink); border-color: var(--line-2); }
+.btn-ghost:hover { border-color: var(--veridico-green-border); color: var(--veridico-green-ink); }
+.btn-sm { padding: 8px 14px; font-size: 13px; }
+.btn[disabled], .btn[aria-disabled="true"] { opacity: .45; cursor: not-allowed; transform: none; box-shadow: none; }
+
+/* ─── Language switcher */
+.lang { display: inline-flex; border: 1px solid var(--line-2); border-radius: 999px; padding: 2px; background: var(--surface); }
+.lang button {
+  border: 0; background: none; cursor: pointer; padding: 5px 9px; border-radius: 999px;
+  font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: .6px; color: var(--ink-3);
+}
+.lang button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+
+/* ─── Brand mark */
+.brand { display: inline-flex; align-items: center; gap: 9px; text-decoration: none; font-weight: 650; letter-spacing: -0.02em; font-size: 17px; color: var(--ink); }
+.brand .dot { color: var(--veridico-green); }
+.brand .pill {
+  font-family: var(--mono); font-size: 9.5px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--veridico-green-ink); background: var(--veridico-green-soft); border: 1px solid var(--veridico-green-border);
+  padding: 3px 7px; border-radius: 999px;
+}
+
+/* ─── Flow engine (shared SVG connections + Intelligence Pulse) */
+.flow { position: relative; }
+.flow-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; overflow: visible; }
+.flow > *:not(.flow-svg) { position: relative; z-index: 1; }
+.flow-line { fill: none; stroke: var(--line-2); stroke-width: 1; transition: stroke .8s var(--ease); }
+.flow-line.lit { stroke: var(--veridico-green-border); transition: stroke .15s; }
+.pulse-glow  { fill: none; stroke: var(--veridico-green-soft); stroke-width: 6; stroke-linecap: round; }
+.pulse-trail { fill: none; stroke: var(--veridico-green); stroke-width: 1.8; stroke-linecap: round; }
+.pulse-halo  { fill: var(--veridico-green-soft); }
+.pulse-dot   { fill: var(--veridico-green-hover); }
+
+/* ─── Portal (entry from denilsonarnau.com, Landing → Intelligence) */
+.portal {
+  position: fixed; inset: 0; z-index: 1000; display: none;
+  background: var(--surface); overflow: hidden; pointer-events: none;
+}
+html.portal-boot .portal, .portal.on { display: block; pointer-events: auto; cursor: pointer; }
+html.portal-boot .portal { background: #030504; }
+html.portal-boot body > *:not(.portal) { visibility: hidden; }
+.portal-hole {
+  position: absolute; left: 50%; top: 50%; width: 160px; height: 160px; margin: -80px 0 0 -80px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, #000 0 55%, #050806 70%, #0b1a10 100%);
+  box-shadow: 0 0 0 1px var(--veridico-green-border), 0 0 60px 10px var(--veridico-green-glow), 0 0 160px 40px var(--veridico-green-soft);
+  transform: scale(0);
+}
+.portal-ring {
+  position: absolute; left: 50%; top: 50%; width: 220px; height: 220px; margin: -110px 0 0 -110px;
+  border-radius: 50%; border: 1px solid var(--veridico-green-border); opacity: 0;
+}
+.portal-ring.r2 { width: 300px; height: 300px; margin: -150px 0 0 -150px; border-style: dashed; }
+.portal-p {
+  position: absolute; left: 50%; top: 50%; width: 3px; height: 3px; border-radius: 50%;
+  background: var(--veridico-green); opacity: 0;
+}
+.portal-label {
+  position: absolute; left: 0; right: 0; bottom: 12vh; text-align: center;
+  font-family: var(--mono); font-size: 11px; letter-spacing: 2.4px; text-transform: uppercase;
+  color: var(--veridico-green-ink); opacity: 0;
+}
+.portal.dark { background: #030504; }
+.portal.dark .portal-label { color: var(--veridico-green); }
+
+/* enter: white → hole grows to cover the screen */
+.portal.enter .portal-hole { animation: hole-grow 1s var(--ease) forwards; }
+.portal.enter .portal-ring { animation: ring-in 1s var(--ease) forwards; }
+.portal.enter .portal-ring.r2 { animation-delay: .08s; }
+.portal.enter .portal-p { animation: p-in 1s var(--ease) forwards; }
+.portal.enter .portal-label { animation: fade-in .5s .15s forwards; }
+@keyframes hole-grow { 0% { transform: scale(0); } 45% { transform: scale(1); } 100% { transform: scale(22); } }
+@keyframes ring-in { 0% { opacity: 0; transform: scale(2.2); } 50% { opacity: 1; } 100% { opacity: 0; transform: scale(.2); } }
+@keyframes p-in {
+  0% { opacity: 0; transform: rotate(var(--a)) translateX(var(--r)); }
+  30% { opacity: 1; }
+  100% { opacity: 0; transform: rotate(calc(var(--a) + 200deg)) translateX(0); }
+}
+@keyframes fade-in { to { opacity: 1; } }
+
+/* arrive: covered dark → hole opens outward, revealing white */
+.portal.arrive { background: transparent; }
+.portal.arrive::before {
+  content: ""; position: absolute; left: 50%; top: 50%; width: 200vmax; height: 200vmax;
+  margin: -100vmax 0 0 -100vmax; border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, transparent 0, transparent 1%, #030504 1.2%, #030504 100%);
+  animation: arrive-open 1.25s cubic-bezier(.75, 0, .85, .15) .05s forwards;
+}
+.portal.arrive .portal-ring { animation: ring-out 1.2s var(--ease) .1s forwards; }
+.portal.arrive .portal-ring.r2 { animation-delay: .2s; }
+.portal.arrive .portal-p { animation: p-out 1.1s var(--ease) forwards; }
+.portal.arrive .portal-label { color: var(--veridico-green); animation: fade-out .5s forwards; opacity: 1; }
+@keyframes arrive-open {
+  0%   { transform: scale(1);  opacity: 1; }
+  88%  { opacity: 1; }
+  100% { transform: scale(60); opacity: 0; }
+}
+@keyframes ring-out { 0% { opacity: 1; transform: scale(.3); } 100% { opacity: 0; transform: scale(4); } }
+@keyframes p-out {
+  0% { opacity: 1; transform: rotate(var(--a)) translateX(10px); }
+  100% { opacity: 0; transform: rotate(calc(var(--a) + 120deg)) translateX(calc(var(--r) * 3)); }
+}
+@keyframes fade-out { to { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .portal *, .portal::before { animation: none !important; }
+  .portal.enter { animation: fade-in .2s forwards; background: #030504; opacity: 0; }
+  .portal.arrive { animation: fade-out .25s forwards; background: #030504; }
+}
