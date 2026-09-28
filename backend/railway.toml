@@ -1,0 +1,16 @@
+# Verídico backend — Railway service config.
+# Service settings: Root Directory = backend, Config File Path = /backend/railway.toml
+# (Railway resolves the config file path from the repository root, not from the root directory.)
+
+[build]
+builder = "RAILPACK"
+# Explicit install (including dev deps: TypeScript is needed to compile even if NODE_ENV=production
+# is set as a service variable) + compile.
+buildCommand = "npm ci --include=dev && npm run build"
+
+[deploy]
+startCommand = "npm start"          # node dist/server.js — listens on $PORT (Railway-provided), host 0.0.0.0
+healthcheckPath = "/health"
+healthcheckTimeout = 60
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5
