@@ -1,0 +1,6 @@
+# Only the static frontend is deployed to Vercel. The backend deploys to Railway.
+backend/
+docs/
+.env
+.env.*
+node_modules/

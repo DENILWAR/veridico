@@ -1,6 +1,17 @@
 # Verídico Intelligence — landing + interactive demo
 
-Static site on Vercel (no build step). ES modules in `assets/js`, serverless functions in `api/`.
+Two deployables:
+
+- **Frontend**: static site on Vercel (no build step). ES modules in `assets/js`.
+- **Backend** (`backend/`): Fastify + TypeScript service on Railway. See [backend/README.md](../backend/README.md).
+
+```
+Browser → Verídico frontend (Vercel) → Verídico backend (Railway) → SON Intelligence Gateway → model provider
+                                            └─ unavailable / timeout → deterministic-demo
+```
+
+Verídico builds the operational truth (session, events, detected workflow, recommendation, estimates).
+SON Intelligence reasons about it and owns model, provider, routing and product policy.
 
 ## Structure
 
@@ -17,9 +28,9 @@ Static site on Vercel (no build step). ES modules in `assets/js`, serverless fun
 | `assets/js/demo/detector.js` | Deterministic recurring-workflow detector (LCS sequence similarity). |
 | `assets/js/demo/recommend.js` | Automation recommendation, role evolution, summary metrics. |
 | `assets/js/demo/desktop.js`, `apps/*` | Desktop window manager, ORDR demo CRM, SON Files, SON Browser. |
-| `assets/js/intelligence/gateway.js` | `IntelligenceGateway`, `VeridicoIntelligenceClient`, `DemoIntelligenceProvider`. |
-| `api/intelligence.js` | Abstract route → `INTELLIGENCE_GATEWAY_URL`. |
-| `api/leads.js` | "Analyze my company" → `LEADS_WEBHOOK_URL` or function log. |
+| `assets/js/runtime-config.js` | `VERIDICO_API_URL`: public backend URL (edit per deployment; not a secret). |
+| `assets/js/intelligence/gateway.js` | Single Intelligence client, `buildIntelligenceContext()`, `DemoIntelligenceProvider` (deterministic-demo). |
+| `backend/` | Railway service: `/health`, `/ready`, `/api/intelligence`, `/api/leads`. |
 
 ## Run locally
 
@@ -27,7 +38,7 @@ Static site on Vercel (no build step). ES modules in `assets/js`, serverless fun
 python3 -m http.server 8765   # ES modules need http://, not file://
 ```
 
-`/api/*` doesn't exist on a plain static server. The chat falls back to the deterministic demo provider, and the lead form shows its fallback message (email). Use `vercel dev` to exercise the functions.
+With `VERIDICO_API_URL = ''` the chat answers with the deterministic demo provider and the lead form shows its email alternative. To use the backend locally, run it (`cd backend && npm run dev` with a `.env`) and temporarily set `VERIDICO_API_URL` in `assets/js/runtime-config.js` to its URL. Don't commit that change.
 
 ## Entry routing (denilsonarnau.com)
 
@@ -50,21 +61,32 @@ An execution runs from `crm.invoice.open` to `crm.invoice.save` for the same inv
 
 There is no timer and no ML. The UI says so in the Workflows view ("How this was detected").
 
-## Intelligence gateway contract
+## Intelligence flow
 
-The browser calls only `/api/intelligence`.
+1. `app.js` builds the context with **`buildIntelligenceContext()`** (the only context builder), using runtime values from the session, the detector and the recommendation. It sends no raw event stream and no personal data. It contains `state` (`no_session` / `observing` / `session_ended` / `workflow_detected`), `about` (static truthful product facts), `session`, `executions` (id, invoice, actions, seconds), `workflow`, `recommendation` and `estimates` (`is_estimate: true`).
+2. `VeridicoIntelligenceClient.ask()` → `POST {VERIDICO_API_URL}/api/intelligence` with `{ question, lang, session_id, context }`.
+3. The backend validates and strips the context (Zod), then calls `POST {SON_INTELLIGENCE_URL}/v1/ask` with `Authorization: Bearer {SON_INTELLIGENCE_KEY}` and body `{ input, context, metadata: { session_id } }`. It never sends model, provider, temperature, tools or prompts.
+4. On success the response is `{ output, provider: "son-intelligence", request_id }`.
+5. When SON isn't configured, times out (`SON_INTELLIGENCE_TIMEOUT_MS`, default 10 s), is unavailable or returns a bad response, the backend returns `{ output: null, provider: "deterministic-demo", fallback: true, fallback_reason, request_id }`. The browser then answers with the existing `DemoIntelligenceProvider`, from the same context. If the backend itself is unreachable (or the browser's 13 s timeout fires), the same provider answers. The demo never shows an error.
 
-- `GET` → `{ configured: boolean }`. This drives the CONNECTED / NOT CONNECTED badge.
-- `POST { question, lang, context }` → the function forwards `{ product: 'veridico', question, lang, context }` to `INTELLIGENCE_GATEWAY_URL` (with `Authorization: Bearer INTELLIGENCE_API_KEY` when set).
-- The gateway must answer `{ answer: string, provider?: string, actions?: string[] }`. Supported `actions`: `start`, `session`, `workflows`, `recommendations`, `explore`.
-
-`context` is built by `buildContext()`. It contains session counts, completed executions (event types, action counts, durations), the detection and the recommendation. Estimates are flagged with `isEstimate: true`. It contains no personal data.
-
-If the gateway is unset, fails or times out, `DemoIntelligenceProvider` (`provider: "deterministic-demo"`) answers the supported intents from session data. The UI labels every answer with its provider.
+Without a session (e.g. the `?q=` entry) the context has `state: "no_session"` and `workflow`, `recommendation` and `estimates` set to `null`. Answers can explain what Verídico is and how it works, but not report observed processes or savings. They offer "Experience this with a real workflow", which starts the observation session.
 
 ## Status system
 
 Use `<span class="badge" data-status="…">` with one of `real`, `demo`, `connected`, `not_connected`, `planned`, `experimental`, `estimate`. Labels live in i18n under `status.*`.
+
+## Leads
+
+`POST {VERIDICO_API_URL}/api/leads` with `name, company, role, email, size, software, repetitive_process, let_veridico_discover, consent, lang, source, demo` (plus the `website` honeypot). When `LEADS_WEBHOOK_URL` is set the lead is forwarded and the response is `{ accepted: true }`. Otherwise the response is `{ accepted: false, fallback: true }` and the UI shows the email alternative. Leads are never kept in logs.
+
+## Configuration
+
+| Where | Variable | Notes |
+|---|---|---|
+| Railway (backend) | `NODE_ENV`, `PORT`, `SON_INTELLIGENCE_URL`, `SON_INTELLIGENCE_KEY`, `ALLOWED_ORIGINS`, `LEADS_WEBHOOK_URL` (+ optional `SON_INTELLIGENCE_TIMEOUT_MS`, `BODY_LIMIT_BYTES`) | The key exists only here. |
+| Frontend | `VERIDICO_API_URL` in `assets/js/runtime-config.js` | Public URL. Also add its origin to `connect-src` in `vercel.json`. |
+
+The legacy names `INTELLIGENCE_GATEWAY_URL` / `INTELLIGENCE_API_KEY` and the Vercel functions `api/intelligence.js` / `api/leads.js` were removed. There is no compatibility layer.
 
 ## P1 (next)
 
