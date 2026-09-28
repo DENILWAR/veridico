@@ -7,4 +7,5 @@
 //   Empty → the chat answers with the in-browser deterministic-demo provider and the lead form
 //   shows its email alternative; the demo keeps working.
 //   Also add this origin to connect-src in vercel.json (Content-Security-Policy).
-export const VERIDICO_API_URL = '';
+window.VERIDICO_API_URL = "https://veridico-production.up.railway.app";
+export const VERIDICO_API_URL = window.VERIDICO_API_URL;
