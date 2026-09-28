@@ -5,7 +5,7 @@
 import { applyI18n, mountLangSwitcher, t, fmtNumber, fmtDuration, getLang } from '../i18n.js';
 import { portalArrive } from '../portal.js';
 import { DEMO_CONFIG as cfg } from './config.js';
-import { ObservationSession } from './session.js';
+import { ObservationSession, newId } from './session.js';
 import { detect } from './detector.js';
 import { recommend, summarize } from './recommend.js';
 import { Desktop } from './desktop.js';
@@ -13,7 +13,7 @@ import { INVOICES, COMPANY } from './data.js';
 import { createOrdr } from './apps/ordr.js';
 import { createFiles } from './apps/files.js';
 import { createBrowser } from './apps/browser.js';
-import { VeridicoIntelligenceClient, DemoIntelligenceProvider, buildContext, SUGGESTED_QUESTIONS } from '../intelligence/gateway.js';
+import { VeridicoIntelligenceClient, DemoIntelligenceProvider, buildIntelligenceContext, SUGGESTED_QUESTIONS } from '../intelligence/gateway.js';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -41,7 +41,13 @@ const entrySource = params.get('source');
 const narrowMq = window.matchMedia(`(max-width: ${cfg.MOBILE_BREAKPOINT - 1}px)`);
 const isNarrow = () => narrowMq.matches;
 
-const intelligence = new VeridicoIntelligenceClient({ endpoint: cfg.INTELLIGENCE_ENDPOINT, fallback: new DemoIntelligenceProvider() });
+const intelligence = new VeridicoIntelligenceClient({
+  endpoint: cfg.INTELLIGENCE_ENDPOINT,
+  readyEndpoint: cfg.READY_ENDPOINT,
+  fallback: new DemoIntelligenceProvider(),
+  timeoutMs: cfg.INTELLIGENCE_CLIENT_TIMEOUT_MS,
+});
+const pageSessionId = newId(); // used before an observation session exists (e.g. ?q= entry)
 
 /* ─── Demo environment (desktop + apps) ──────────────────────────── */
 const record = (type, opts) => session.record(type, opts);
@@ -434,7 +440,7 @@ function renderRecommendations() {
 
 /* ─── Intelligence chat ──────────────────────────────────────────── */
 const ACTIONS = {
-  start: ['chat.act_start', () => setView('overview', { focus: true })],
+  start: ['chat.act_start', () => (isNarrow() || session.status === 'observing' ? setView(session.status === 'observing' ? 'session' : 'overview', { focus: true }) : startSession())],
   session: ['chat.act_session', () => setView('session')],
   workflows: ['moment.review', () => setView('workflows', { focus: true })],
   recommendations: ['chat.act_rec', () => setView('recommendations', { focus: true })],
@@ -512,6 +518,13 @@ function renderContextPanel() {
     <p class="ctx-note">${esc(gateway.connected ? t('ctx.note_gw') : t('ctx.note_demo'))}</p>`;
 }
 
+// Next steps offered under SON Intelligence answers, derived from the demo state.
+function stateActions() {
+  if (session.status === 'idle') return ['start'];
+  if (!detection) return session.status === 'observing' ? ['session'] : ['start'];
+  return ['recommendations'];
+}
+
 async function ask(question) {
   if (chatBusy) return;
   chatBusy = true;
@@ -521,9 +534,10 @@ async function ask(question) {
   const input = $('#chatInput');
   if (input) input.value = '';
   renderChatLog();
-  const context = buildContext({ session, detection, recommendation: rec, config: cfg });
-  const res = await intelligence.ask({ question, lang: getLang(), context });
-  Object.assign(pending, { pending: false, text: res.answer, provider: res.provider, actions: res.actions || [] });
+  const context = buildIntelligenceContext({ session, detection, recommendation: rec, config: cfg, lang: getLang() });
+  const res = await intelligence.ask({ question, lang: getLang(), session_id: session.id || pageSessionId, context });
+  const actions = res.provider === 'deterministic-demo' ? (res.actions || []) : stateActions();
+  Object.assign(pending, { pending: false, text: res.answer, provider: res.provider, actions });
   if (entryQuestion && chatLog.length === 2 && !pending.actions.includes('explore')) pending.actions.push('explore');
   chatBusy = false;
   gateway.connected = intelligence.gatewayAvailable === true;
@@ -649,18 +663,30 @@ async function submitLead(e) {
   leadState = 'sending';
   renderSummary();
   const s = summarize(session, detection, rec);
+  const unknown = !!leadDraft.unknown;
   try {
+    if (!cfg.LEADS_ENDPOINT) throw new Error('no backend configured');
     const r = await fetch(cfg.LEADS_ENDPOINT, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', accept: 'application/json' },
       body: JSON.stringify({
-        ...leadDraft,
+        name: leadDraft.name || '',
+        company: leadDraft.company || '',
+        role: leadDraft.role || '',
+        email: leadDraft.email || '',
+        size: leadDraft.size || '',
+        software: leadDraft.software || '',
+        repetitive_process: unknown ? '' : leadDraft.process || '',
+        let_veridico_discover: unknown,
+        consent: !!leadDraft.consent,
+        website: leadDraft.website || '',
         lang: getLang(),
         source: entrySource || 'veridico-demo',
         demo: { events: s.events, executions: s.executions, recurring: s.recurring, workflow: detection ? detection.workflowKey : null },
       }),
     });
-    leadState = r.ok ? 'sent' : 'error';
+    const j = await r.json().catch(() => null);
+    leadState = r.ok && j && j.accepted ? 'sent' : 'error'; // accepted:false + fallback → email alternative
   } catch (x) {
     leadState = 'error';
   }

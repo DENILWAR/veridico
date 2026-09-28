@@ -10,6 +10,7 @@ export class ObservationSession extends EventTarget {
   }
 
   reset() {
+    this.id = null;                // opaque id sent as session_id (no personal data)
     this.status = 'idle';          // idle | observing | ended
     this.events = [];
     this.executions = [];
@@ -22,6 +23,7 @@ export class ObservationSession extends EventTarget {
 
   start() {
     this.reset();
+    this.id = newId();
     this.status = 'observing';
     this.startedAt = Date.now();
     this.emit('status');
@@ -74,6 +76,12 @@ export class ObservationSession extends EventTarget {
   completed() { return this.executions.filter((e) => e.complete); }
 
   emit(name, detail) { this.dispatchEvent(new CustomEvent(name, { detail })); }
+}
+
+export function newId() {
+  const c = globalThis.crypto;
+  const raw = c && c.randomUUID ? c.randomUUID() : `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
+  return `vs_${raw.replace(/[^A-Za-z0-9]/g, '').slice(0, 32)}`;
 }
 
 function isTrailing(type) { return type === 'crm.queue.return'; }

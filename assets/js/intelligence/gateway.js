@@ -1,31 +1,27 @@
-// Verídico Intelligence — gateway abstraction.
+// Verídico Intelligence — the single Intelligence client of the frontend.
 //
-// UI components never talk to an LLM vendor. They call VeridicoIntelligenceClient, which only
-// talks to the abstract route /api/intelligence (to be routed by SON Intelligence later).
-// If that route is not configured or unreachable, the DemoIntelligenceProvider answers the
-// supported questions deterministically from real session data. It is labelled
-// "deterministic-demo" and is never presented as an LLM.
+// Browser → Verídico backend (VERIDICO_API_URL/api/intelligence) → SON Intelligence Gateway.
+// The frontend never talks to SON Intelligence or any model vendor, and never holds a key.
+//
+// Verídico builds the operational truth (buildIntelligenceContext). SON Intelligence reasons
+// about it. When the backend answers with the deterministic-demo directive (SON not configured,
+// timeout, unavailable) — or the backend itself is unreachable — DemoIntelligenceProvider answers
+// the supported questions from the same context. It is labelled "deterministic-demo" and is never
+// presented as an LLM.
 import { t, fmtNumber, fmtDuration } from '../i18n.js';
 
 /**
- * @typedef {Object} IntelligenceContext
- * @property {'veridico'} product
- * @property {'demo'} environment
- * @property {Object} session         status, counts, threshold
- * @property {Array}  executions      completed executions (steps, actions, duration)
- * @property {Object|null} detection  recurring workflow, if detected
- * @property {Object|null} recommendation automation + role evolution (estimates flagged)
- *
  * @typedef {Object} IntelligenceRequest
  * @property {string} question
  * @property {'en'|'es'|'de'} lang
- * @property {IntelligenceContext} context
+ * @property {string} [session_id]
+ * @property {Object} context   output of buildIntelligenceContext()
  *
  * @typedef {Object} IntelligenceResponse
  * @property {string} answer
- * @property {string} provider        e.g. "son-intelligence" or "deterministic-demo"
- * @property {string} [intent]
- * @property {string[]} [actions]     UI actions the answer suggests (start, workflows, …)
+ * @property {'son-intelligence'|'deterministic-demo'} provider
+ * @property {string} [requestId]
+ * @property {string[]} [actions]
  *
  * @typedef {Object} IntelligenceGateway
  * @property {(request: IntelligenceRequest) => Promise<IntelligenceResponse>} ask
@@ -33,54 +29,142 @@ import { t, fmtNumber, fmtDuration } from '../i18n.js';
 
 /** @implements {IntelligenceGateway} */
 export class VeridicoIntelligenceClient {
-  constructor({ endpoint, fallback, timeoutMs = 12000 }) {
-    this.endpoint = endpoint;
+  constructor({ endpoint, readyEndpoint, fallback, timeoutMs = 13000 }) {
+    this.endpoint = endpoint;           // '' → no backend configured: deterministic-demo only
+    this.readyEndpoint = readyEndpoint;
     this.fallback = fallback;
     this.timeoutMs = timeoutMs;
-    this.gatewayAvailable = null; // unknown until probed
+    this.gatewayAvailable = null;       // last known: did SON Intelligence answer?
   }
 
+  /** Readiness of backend + SON Intelligence (configuration only; no model call). */
   async status() {
+    if (!this.readyEndpoint) { this.gatewayAvailable = false; return { connected: false }; }
     try {
-      const r = await fetch(this.endpoint, { method: 'GET', headers: { accept: 'application/json' } });
-      const j = r.ok ? await r.json() : null;
-      this.gatewayAvailable = !!(j && j.configured);
+      const r = await fetch(this.readyEndpoint, { method: 'GET', headers: { accept: 'application/json' } });
+      const j = await r.json();
+      this.gatewayAvailable = !!(j && j.checks && j.checks.son_intelligence);
     } catch (e) {
       this.gatewayAvailable = false;
     }
-    return { connected: this.gatewayAvailable, provider: this.gatewayAvailable ? 'gateway' : this.fallback.name };
+    return { connected: this.gatewayAvailable };
   }
 
   /** @param {IntelligenceRequest} request */
   async ask(request) {
-    if (this.gatewayAvailable === false) return this.fallback.ask(request);
+    if (!this.endpoint) return this.local(request);
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), this.timeoutMs);
     try {
       const r = await fetch(this.endpoint, {
         method: 'POST',
         headers: { 'content-type': 'application/json', accept: 'application/json' },
-        body: JSON.stringify(request),
+        body: JSON.stringify({ question: request.question, lang: request.lang, session_id: request.session_id, context: request.context }),
         signal: ctrl.signal,
       });
-      if (!r.ok) {
-        if ([404, 405, 501, 503].includes(r.status)) this.gatewayAvailable = false;
-        return this.fallback.ask(request);
+      const j = r.ok ? await r.json() : null;
+      if (j && j.provider === 'son-intelligence' && typeof j.output === 'string' && j.output.trim()) {
+        this.gatewayAvailable = true;
+        return { answer: j.output, provider: 'son-intelligence', requestId: j.request_id, actions: [] };
       }
-      const j = await r.json();
-      if (!j || typeof j.answer !== 'string' || !j.answer.trim()) return this.fallback.ask(request);
-      this.gatewayAvailable = true;
-      return { answer: j.answer, provider: j.provider || 'son-intelligence', actions: j.actions || [] };
+      if (j && j.fallback) this.gatewayAvailable = false;
+      return this.local(request, j && j.request_id);
     } catch (e) {
-      this.gatewayAvailable = false;
-      return this.fallback.ask(request);
+      return this.local(request); // backend unreachable / timeout → the demo never breaks
     } finally {
       clearTimeout(timer);
     }
   }
+
+  async local(request, requestId) {
+    const res = await this.fallback.ask(request);
+    return { ...res, requestId };
+  }
 }
 
-/* ─── Deterministic demo provider ────────────────────────────────────────── */
+/* ─── Single context builder ─────────────────────────────────────────────── */
+
+// Static, truthful facts so questions without a session can be answered without inventing
+// observations. Kept short on purpose.
+const ABOUT = {
+  product: 'Verídico Intelligence',
+  what_it_is: 'Operational intelligence that observes how a team works, detects repetitive workflows and recommends what to automate. A human always decides what is automated; people keep exceptions and decisions.',
+  how_it_works: [
+    'Every user action in the demo environment becomes an event (open invoice, search client, classify document, change status, create task, save).',
+    'Events are grouped into workflow executions.',
+    'Executions are compared by their sequence of steps with a deterministic similarity measure (no machine learning in this demo).',
+    'When enough similar executions are observed, Verídico reports a recurring workflow, reconstructs it and recommends an automation with estimated impact.',
+  ],
+  demo_environment: 'Interactive demo with a fictitious company (Nova Administration S.L.) processing supplier invoices in the ORDR demo CRM, SON Files and SON Browser. Nothing is connected to real company systems.',
+  not_available: [
+    'Production integrations with ORDR, CRMs, ERPs or email are planned, not connected.',
+    'Without an observation session there are no observed processes, savings or detected workflows.',
+  ],
+};
+
+const r1 = (x) => Math.round(x * 10) / 10;
+const r3 = (x) => Math.round(x * 1000) / 1000;
+const secs = (ms) => r1(Math.max(0, ms) / 1000);
+
+/**
+ * Converts Verídico's runtime state into the small, structured package sent to Intelligence.
+ * Uses only values computed at runtime (session, detector, recommendation); nothing is hardcoded.
+ * No raw event stream, no personal data.
+ */
+export function buildIntelligenceContext({ session, detection, recommendation, config, lang }) {
+  const done = session.completed();
+  const state = detection ? 'workflow_detected'
+    : session.status === 'idle' ? 'no_session'
+    : session.status === 'ended' ? 'session_ended' : 'observing';
+  return {
+    state,
+    language: lang,
+    about: ABOUT,
+    session: {
+      status: session.status,
+      event_count: session.events.length,
+      workflow_executions: done.length,
+      recurrence_threshold: config.DEMO_THRESHOLD,
+      duration_seconds: session.startedAt ? secs((session.endedAt || Date.now()) - session.startedAt) : 0,
+    },
+    executions: done.slice(-50).map((e) => ({
+      id: e.id,
+      invoice_id: e.invoiceId || null,
+      actions: e.events.length,
+      duration_seconds: secs(e.endedAt - e.startedAt),
+    })),
+    workflow: detection ? {
+      key: detection.workflowKey,
+      name: t(`workflow.${detection.workflowKey}`),
+      occurrences: detection.size,
+      similarity: r3(detection.similarity),
+      average_duration_seconds: secs(detection.avgDurationMs),
+      average_actions: r1(detection.avgActions),
+      steps: detection.steps.map((s) => t(`step.${s.code}`)),
+      variants: detection.variants.map((v) => ({ step: t(`step.${v.code}`), kind: v.kind, executions: v.count, of: v.total })),
+      detection_method: 'deterministic_sequence_similarity',
+    } : null,
+    recommendation: recommendation ? {
+      automation_potential: recommendation.potential,
+      automatable_steps: recommendation.automate.filter((a) => !a.suggested).map((a) => t(`cap.${a.key}`)),
+      suggested_additions: recommendation.automate.filter((a) => a.suggested).map((a) => t(`cap.${a.key}`)),
+      human_steps: recommendation.human.map((h) => t(`human.${h}`)),
+      focus_areas: recommendation.focus.map((f) => t(`focus.${f}`)),
+      repetitive_steps: recommendation.repetitiveSteps,
+      total_steps: detection ? detection.steps.length : 0,
+      exceptions_observed: recommendation.exceptionsObserved,
+    } : null,
+    estimates: recommendation ? {
+      is_estimate: true,
+      basis: 'observed average duration per execution × assumed monthly volume × share of repetitive steps',
+      assumed_monthly_volume: recommendation.estimate.monthlyVolume,
+      manual_hours_per_month: r1(recommendation.estimate.manualHoursPerMonth),
+      recoverable_hours_per_month: r1(recommendation.estimate.recoverableHoursPerMonth),
+    } : null,
+  };
+}
+
+/* ─── Deterministic demo provider (fallback) ─────────────────────────────── */
 
 const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[¿?¡!.,;:]/g, ' ');
 
@@ -91,8 +175,9 @@ const INTENTS = [
   ['focus', ['focus', 'instead', 'worker', 'role', 'employee', 'enfoc', 'centrar', 'en lugar', 'trabajador', 'rol ', 'empleado', 'konzentr', 'stattdessen', 'mitarbeit', 'rolle']],
   ['why', ['why', 'reason', 'recommend', 'por que', 'porque', 'recomiend', 'motivo', 'warum', 'empfiehl', 'empfehl', 'grund']],
   ['show', ['show', 'happened', 'timeline', 'events', 'muestr', 'que paso', 'ha pasado', 'eventos', 'zeig', 'passiert', 'ereignis', 'ablauf']],
+  ['about', ['what is', 'what does', 'what can', 'who are', 'que es', 'que hace', 'que puede', 'was ist', 'was macht', 'was kann']],
   ['automate', ['should my company automate', 'what should', 'automatizar mi', 'deberia automatizar', 'que deberia', 'was sollte', 'automatisieren sollte']],
-  ['detected', ['repetitive', 'detect', 'found', 'pattern', 'repetitiv', 'detect', 'encontr', 'patron', 'wiederhol', 'erkannt', 'gefunden', 'muster']],
+  ['detected', ['repetitive', 'detect', 'found', 'pattern', 'repetitiv', 'encontr', 'patron', 'wiederhol', 'erkannt', 'gefunden', 'muster']],
 ];
 
 export function classify(question) {
@@ -117,13 +202,17 @@ export class DemoIntelligenceProvider {
 
   answer(intent, ctx) {
     const s = ctx.session;
-    const d = ctx.detection;
+    const d = ctx.workflow;
     const r = ctx.recommendation;
-    const wf = d ? t(`workflow.${d.workflow}`) : '';
-    const list = (keys, prefix) => keys.map((k) => t(`${prefix}.${k}`).toLowerCase()).join(', ');
+    const e = ctx.estimates;
+    const lower = (xs) => xs.map((x) => x.toLowerCase()).join(', ');
 
-    if (intent === 'how') return { answer: t('chat.a.how', { threshold: s.threshold }), actions: s.status === 'idle' ? ['start'] : [] };
-
+    if (intent === 'how') return { answer: t('chat.a.how', { threshold: s.recurrence_threshold }), actions: s.status === 'idle' ? ['start'] : [] };
+    if (intent === 'about') {
+      // The generic "what is Verídico" answer states nothing has been observed: only valid without a session.
+      if (s.status === 'idle') return { answer: t('chat.a.about', { threshold: s.recurrence_threshold }), actions: ['start'] };
+      intent = d ? 'detected' : 'observing';
+    }
     if (intent === 'automate' && !d) return { answer: t('chat.a.automate_generic'), actions: ['start'] };
 
     if (s.status === 'idle') {
@@ -131,94 +220,55 @@ export class DemoIntelligenceProvider {
     }
     if (!d) {
       return {
-        answer: t('chat.a.observing', { events: s.events, done: s.completedExecutions, threshold: s.threshold }),
+        answer: t('chat.a.observing', { events: s.event_count, done: s.workflow_executions, threshold: s.recurrence_threshold }),
         actions: ['session'],
       };
     }
 
     const sim = fmtNumber(d.similarity * 100);
-    const dur = fmtDuration(d.avgDurationMs);
+    const dur = fmtDuration(d.average_duration_seconds * 1000);
     switch (intent) {
       case 'detected':
         return {
-          answer: t('chat.a.detected', { workflow: wf, n: d.size, sim, dur, actions: fmtNumber(d.avgActions) }),
+          answer: t('chat.a.detected', { workflow: d.name, n: d.occurrences, sim, dur, actions: fmtNumber(d.average_actions) }),
           actions: ['workflows'],
         };
       case 'why':
         return {
           answer: t('chat.a.why', {
-            workflow: wf, n: d.size, sim,
-            steps: d.steps.map((c) => t(`step.${c}`)).join(' → '),
-            repetitive: r.repetitiveSteps, total: d.steps.length,
-          }) + (r.exceptionsObserved ? '\n\n' + t('chat.a.why_exceptions', { n: r.exceptionsObserved }) : ''),
+            workflow: d.name, n: d.occurrences, sim,
+            steps: d.steps.join(' → '),
+            repetitive: r.repetitive_steps, total: r.total_steps,
+          }) + (r.exceptions_observed ? '\n\n' + t('chat.a.why_exceptions', { n: r.exceptions_observed }) : ''),
           actions: ['recommendations'],
         };
       case 'show': {
-        const lines = ctx.executions.map((e) => t('chat.a.show_line', {
-          id: e.id, invoice: e.invoiceId, actions: e.actions, dur: fmtDuration(e.durationMs),
+        const lines = ctx.executions.map((x) => t('chat.a.show_line', {
+          id: x.id, invoice: x.invoice_id, actions: x.actions, dur: fmtDuration(x.duration_seconds * 1000),
         }));
         return {
-          answer: [t('chat.a.show_intro', { events: s.events }), ...lines, t('chat.a.show_outro', { n: d.size, workflow: wf })].join('\n'),
+          answer: [t('chat.a.show_intro', { events: s.event_count }), ...lines, t('chat.a.show_outro', { n: d.occurrences, workflow: d.name })].join('\n'),
           actions: ['workflows'],
         };
       }
       case 'time':
         return {
           answer: t('chat.a.time', {
-            dur, volume: fmtNumber(r.estimate.monthlyVolume),
-            hours: fmtNumber(r.estimate.recoverableHoursPerMonth, 1),
-            manual: fmtNumber(r.estimate.manualHoursPerMonth, 1),
+            dur, volume: fmtNumber(e.assumed_monthly_volume),
+            hours: fmtNumber(e.recoverable_hours_per_month, 1),
+            manual: fmtNumber(e.manual_hours_per_month, 1),
           }),
           actions: ['recommendations'],
         };
       case 'focus':
-        return { answer: t('chat.a.focus', { focus: list(r.focus, 'focus') }), actions: ['recommendations'] };
+        return { answer: t('chat.a.focus', { focus: lower(r.focus_areas) }), actions: ['recommendations'] };
       case 'automate':
         return {
-          answer: t('chat.a.automate_detected', { workflow: wf, caps: list(r.automate.filter((a) => !a.suggested).map((a) => a.key), 'cap'), human: list(r.human, 'human') }),
+          answer: t('chat.a.automate_detected', { workflow: d.name, caps: lower(r.automatable_steps), human: lower(r.human_steps) }),
           actions: ['recommendations'],
         };
       default:
         return { answer: t('chat.a.unknown'), actions: [] };
     }
   }
-}
-
-/** Build the context sent to any IntelligenceGateway. Only session data; no PII. */
-export function buildContext({ session, detection, recommendation, config }) {
-  return {
-    product: 'veridico',
-    environment: 'demo',
-    session: {
-      status: session.status,
-      events: session.events.length,
-      completedExecutions: session.completed().length,
-      threshold: config.DEMO_THRESHOLD,
-      durationMs: session.startedAt ? (session.endedAt || Date.now()) - session.startedAt : 0,
-    },
-    executions: session.completed().map((e) => ({
-      id: e.id, invoiceId: e.invoiceId, actions: e.events.length, durationMs: e.endedAt - e.startedAt,
-      events: e.events.map((ev) => ev.type),
-    })),
-    detection: detection && {
-      workflow: detection.workflowKey,
-      size: detection.size,
-      similarity: detection.similarity,
-      avgDurationMs: detection.avgDurationMs,
-      avgActions: detection.avgActions,
-      steps: detection.steps.map((s) => s.code),
-      variants: detection.variants,
-      method: 'deterministic-sequence-similarity',
-    },
-    recommendation: recommendation && {
-      automate: recommendation.automate,
-      human: recommendation.human,
-      focus: recommendation.focus,
-      repetitiveSteps: recommendation.repetitiveSteps,
-      automatableShare: recommendation.automatableShare,
-      potential: recommendation.potential,
-      exceptionsObserved: recommendation.exceptionsObserved,
-      estimate: { ...recommendation.estimate, isEstimate: true, basis: 'observed_avg_duration x assumed_monthly_volume' },
-    },
-  };
 }
