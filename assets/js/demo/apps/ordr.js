@@ -9,7 +9,7 @@ const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&':
 const money = (n) => new Intl.NumberFormat(getLang(), { style: 'currency', currency: 'EUR' }).format(n);
 const date = (iso) => new Intl.DateTimeFormat(getLang(), { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(iso));
 
-export function createOrdr({ record, openFileFor, onSaved }) {
+export function createOrdr({ record, openFileFor, onSaved, onRender }) {
   const state = {
     view: 'queue',
     openId: null,
@@ -21,10 +21,11 @@ export function createOrdr({ record, openFileFor, onSaved }) {
   };
   let body = null;
   let readTimer = null;
+  let simulating = false; // true while DEMO FAST-FORWARD drives the UI: events are marked demo-generated
 
   const inv = () => state.invoices.find((i) => i.id === state.openId);
   const ent = (i) => ({ type: 'invoice', id: i.id });
-  const rec = (type, i, data) => record(type, { app: 'ORDR', entity: i ? ent(i) : null, data });
+  const rec = (type, i, data) => record(type, { app: 'ORDR', entity: i ? ent(i) : null, data, demoGenerated: simulating });
 
   function mount(el) {
     body = el;
@@ -43,13 +44,28 @@ export function createOrdr({ record, openFileFor, onSaved }) {
     state.query = '';
     state.results = null;
     state.notice = null;
+    state.readFor = null;
     const i = inv();
     rec('crm.invoice.open', i, { supplier: i.supplier });
     render();
-    let read = false;
     readTimer = setTimeout(() => {
-      if (state.openId === id && !read) { read = true; rec('crm.invoice.read', i, { dwellMs: DEMO_CONFIG.READ_DWELL_MS }); render(); }
+      if (state.openId === id && state.readFor !== id) { state.readFor = id; rec('crm.invoice.read', i, { dwellMs: DEMO_CONFIG.READ_DWELL_MS }); render(); }
     }, DEMO_CONFIG.READ_DWELL_MS);
+  }
+
+  function upsertTask(i) {
+    const c = clientById(i.assignedClientId);
+    const title = t('ordr.task_title', { client: c ? c.name : i.supplier });
+    if (i.taskId) {
+      const task = state.tasks.find((x) => x.id === i.taskId);
+      task.title = title;
+      rec('crm.task.update', i, { taskId: task.id });
+    } else {
+      const task = { id: `T-${String(301 + state.tasks.length)}`, invoiceId: i.id, title, due: '2026-10-05' };
+      state.tasks.push(task);
+      i.taskId = task.id;
+      rec('crm.task.create', i, { taskId: task.id });
+    }
   }
 
   function onClick(e) {
@@ -75,18 +91,7 @@ export function createOrdr({ record, openFileFor, onSaved }) {
       render();
       body.querySelector('#ordrSearch')?.focus();
     } else if (act === 'task') {
-      const c = clientById(i.assignedClientId);
-      const title = t('ordr.task_title', { client: c ? c.name : i.supplier });
-      if (i.taskId) {
-        const task = state.tasks.find((x) => x.id === i.taskId);
-        task.title = title;
-        rec('crm.task.update', i, { taskId: task.id });
-      } else {
-        const task = { id: `T-${String(301 + state.tasks.length)}`, invoiceId: i.id, title, due: '2026-10-05' };
-        state.tasks.push(task);
-        i.taskId = task.id;
-        rec('crm.task.create', i, { taskId: task.id });
-      }
+      upsertTask(i);
       render();
     } else if (act === 'file') {
       openFileFor(i.id);
@@ -140,7 +145,7 @@ export function createOrdr({ record, openFileFor, onSaved }) {
     rec('crm.invoice.save', i, { status: i.status, type: i.type, clientId: i.assignedClientId });
     state.notice = { kind: 'ok', text: t('ordr.saved', { id: i.id }) };
     render();
-    body.querySelector('[data-act="back"]')?.focus();
+    if (!simulating) body && body.querySelector('[data-act="back"]')?.focus();
     onSaved && onSaved(i);
   }
 
@@ -174,6 +179,7 @@ export function createOrdr({ record, openFileFor, onSaved }) {
           <div class="ordr-content">${views[state.view]()}</div>
         </div>
       </div>`;
+    if (onRender) onRender();
   }
 
   const statusPill = (s) => `<span class="pill st-${s}">${esc(t(`ordr.status.${s}`))}</span>`;
@@ -313,10 +319,61 @@ export function createOrdr({ record, openFileFor, onSaved }) {
     },
   };
 
+  /**
+   * DEMO FAST-FORWARD: completes one invoice through the same action paths a visitor uses,
+   * so the same events reach session.record() (marked demo-generated) and the real detector.
+   * Only missing steps are performed; nothing is written to the detection directly.
+   */
+  async function simulate(id, { delay = 220, onStep } = {}) {
+    const wait = () => new Promise((r) => setTimeout(r, delay));
+    const step = async (key) => { if (onStep) onStep(key, id); render(); await wait(); };
+    simulating = true;
+    try {
+      if (state.view !== 'invoice' || state.openId !== id) { openInvoice(id); await step('open'); }
+      clearTimeout(readTimer);
+      const i = inv();
+      if (state.readFor !== id) { state.readFor = id; rec('crm.invoice.read', i, { dwellMs: 0 }); await step('read'); }
+      if (!i.assignedClientId || i.assignedClientId !== i.clientId) {
+        const c = clientById(i.clientId);
+        state.query = c.name.split(' ')[0];
+        state.results = searchClients(state.query);
+        rec('crm.client.search', i, { query: state.query, results: state.results.length });
+        await step('search');
+        i.assignedClientId = c.id;
+        state.results = null;
+        rec('crm.client.select', i, { clientId: c.id, taxMatch: true });
+        await step('select');
+      }
+      if (!i.type) { i.type = 'supplier_invoice'; rec('crm.invoice.classify', i, { type: i.type }); await step('classify'); }
+      if (i.status === 'pending_review') {
+        const from = i.status; i.status = 'validated';
+        rec('crm.invoice.status_change', i, { from, to: i.status });
+        await step('status');
+      }
+      if (!i.taskId) { upsertTask(i); await step('task'); }
+      if (!i.saved) { save(i); await step('save'); }
+      rec('crm.queue.return', i, {});
+      go('queue');
+      await step('back');
+    } finally {
+      simulating = false;
+    }
+  }
+
   return {
     mount,
     render,
     state,
+    simulate,
+    isSimulating: () => simulating,
+    nextPendingId() {
+      if (state.view === 'invoice' && state.openId) {
+        const cur = state.invoices.find((x) => x.id === state.openId);
+        if (cur && !cur.saved) return cur.id;
+      }
+      const next = state.invoices.find((x) => !x.saved);
+      return next ? next.id : null;
+    },
     markVerified(invoiceId) {
       const i = state.invoices.find((x) => x.id === invoiceId);
       if (i) { i.verified = true; render(); }

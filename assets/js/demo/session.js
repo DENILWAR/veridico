@@ -37,9 +37,11 @@ export class ObservationSession extends EventTarget {
   }
 
   /** Record an event produced by a user action inside the demo environment. */
-  record(type, { app, entity, data } = {}) {
+  record(type, { app, entity, data, demoGenerated } = {}) {
     if (this.status !== 'observing') return null;
     const ev = { id: ++this._seq, type, ts: Date.now(), app: app || null, entity: entity || null, data: data || {} };
+    // DEMO FAST-FORWARD events are marked; the detector only reads type/ts/entity, so it is unaffected.
+    if (demoGenerated) ev.demo_generated = true;
     this.events.push(ev);
 
     if (type === 'crm.invoice.open') {
@@ -52,6 +54,7 @@ export class ObservationSession extends EventTarget {
         endedAt: null,
         complete: false,
         abandoned: false,
+        demoGenerated: !!demoGenerated,
       };
       this.executions.push(this.current);
     }
@@ -60,7 +63,10 @@ export class ObservationSession extends EventTarget {
     if (cur && !cur.abandoned) {
       // Events about another invoice don't belong to this execution.
       const other = entity && entity.type === 'invoice' && entity.id !== cur.invoiceId;
-      if (!other && !(cur.complete && !isTrailing(type))) cur.events.push(ev);
+      if (!other && !(cur.complete && !isTrailing(type))) {
+        cur.events.push(ev);
+        if (demoGenerated) cur.demoGenerated = true;
+      }
       if (type === 'crm.invoice.save' && !cur.complete && entity && entity.id === cur.invoiceId) {
         cur.complete = true;
         cur.endedAt = ev.ts;
