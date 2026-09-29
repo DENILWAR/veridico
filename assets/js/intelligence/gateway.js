@@ -94,6 +94,8 @@ const ABOUT = {
     'Events are grouped into workflow executions.',
     'Executions are compared by their sequence of steps with a deterministic similarity measure (no machine learning in this demo).',
     'When enough similar executions are observed, Verídico reports a recurring workflow, reconstructs it and recommends an automation with estimated impact.',
+    'How to use the demo: start the observation session; in ORDR open an invoice, search and select its client, classify it, change its status, create or update the follow-up task and save; repeat with similar invoices until the recurrence threshold is reached. A "demo fast-forward" option can simulate the remaining interactions; such executions are marked demo_generated.',
+    'All numbers in session, executions, workflow, recommendation and estimates are computed deterministically by Verídico from this demo session. Estimates are projections based on an assumed monthly volume, not measurements of any real company.',
   ],
   demo_environment: 'Interactive demo with a fictitious company (Nova Administration S.L.) processing supplier invoices in the ORDR demo CRM, SON Files and SON Browser. Nothing is connected to real company systems.',
   not_available: [
@@ -126,12 +128,14 @@ export function buildIntelligenceContext({ session, detection, recommendation, c
       workflow_executions: done.length,
       recurrence_threshold: config.DEMO_THRESHOLD,
       duration_seconds: session.startedAt ? secs((session.endedAt || Date.now()) - session.startedAt) : 0,
+      demo_generated_executions: done.filter((e) => e.demoGenerated).length,
     },
     executions: done.slice(-50).map((e) => ({
       id: e.id,
       invoice_id: e.invoiceId || null,
       actions: e.events.length,
       duration_seconds: secs(e.endedAt - e.startedAt),
+      demo_generated: !!e.demoGenerated,
     })),
     workflow: detection ? {
       key: detection.workflowKey,
@@ -170,13 +174,16 @@ const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-
 
 // Order matters: first match wins.
 const INTENTS = [
-  ['how', ['how does', 'how do you', 'how you detect', 'como detect', 'como funciona', 'como sabe', 'wie erkenn', 'wie funktioniert', 'wie findet']],
-  ['time', ['how much time', 'save', 'hours', 'time', 'tiempo', 'ahorr', 'horas', 'zeit', 'spar', 'stunden']],
+  ['next', ['what do i do', 'what should i do', 'what now', 'next', 'guide', 'que hago', 'que debo hacer', 'siguiente', 'guia', 'was soll ich', 'was mache ich', 'nachste', 'fuhr mich', 'anleitung']],
+  ['repeat', ['why do i need to repeat', 'why repeat', 'repeat the', 'por que repetir', 'por que tengo que repetir', 'repetir el', 'warum wiederholen', 'warum muss ich', 'wiederholen']],
+  ['how', ['how does', 'how do you', 'how you detect', 'will you be observ', 'what will you observ', 'como detect', 'como funciona', 'como sabe', 'que vas a observ', 'wie erkenn', 'wie funktioniert', 'wie findet', 'was wirst du beobacht']],
+  ['human', ['stay human', 'remain human', 'human', 'humano', 'personas', 'mensch']],
+  ['time', ['how much time', 'save', 'hours', 'time', 'impact', 'tiempo', 'ahorr', 'horas', 'impacto', 'zeit', 'spar', 'stunden', 'auswirkung']],
   ['focus', ['focus', 'instead', 'worker', 'role', 'employee', 'enfoc', 'centrar', 'en lugar', 'trabajador', 'rol ', 'empleado', 'konzentr', 'stattdessen', 'mitarbeit', 'rolle']],
   ['why', ['why', 'reason', 'recommend', 'por que', 'porque', 'recomiend', 'motivo', 'warum', 'empfiehl', 'empfehl', 'grund']],
-  ['show', ['show', 'happened', 'timeline', 'events', 'muestr', 'que paso', 'ha pasado', 'eventos', 'zeig', 'passiert', 'ereignis', 'ablauf']],
+  ['show', ['show', 'happened', 'timeline', 'events', 'observed so far', 'so far', 'muestr', 'que paso', 'ha pasado', 'eventos', 'hasta ahora', 'zeig', 'passiert', 'ereignis', 'ablauf', 'bisher']],
   ['about', ['what is', 'what does', 'what can', 'who are', 'que es', 'que hace', 'que puede', 'was ist', 'was macht', 'was kann']],
-  ['automate', ['should my company automate', 'what should', 'automatizar mi', 'deberia automatizar', 'que deberia', 'was sollte', 'automatisieren sollte']],
+  ['automate', ['should my company automate', 'what should', 'automate first', 'would you automate', 'automatizar mi', 'deberia automatizar', 'que deberia', 'automatizarias', 'was sollte', 'automatisieren sollte', 'zuerst automatis']],
   ['detected', ['repetitive', 'detect', 'found', 'pattern', 'repetitiv', 'encontr', 'patron', 'wiederhol', 'erkannt', 'gefunden', 'muster']],
 ];
 
@@ -186,7 +193,13 @@ export function classify(question) {
   return 'unknown';
 }
 
-export const SUGGESTED_QUESTIONS = ['chat.q.detected', 'chat.q.why', 'chat.q.show', 'chat.q.time', 'chat.q.focus'];
+// Contextual quick prompts (i18n keys), selected by the deterministic demo state.
+export const SUGGESTED_QUESTIONS = {
+  no_session: ['chat.q.how_demo', 'chat.q.what_is', 'chat.q.guide', 'chat.q.observe_what'],
+  observing: ['chat.q.observed_so_far', 'chat.q.next', 'chat.q.why_repeat'],
+  session_ended: ['chat.q.observed_so_far', 'chat.q.what_is', 'chat.q.how_demo'],
+  workflow_detected: ['chat.q.why', 'chat.q.first', 'chat.q.human', 'chat.q.impact', 'chat.q.explain_wf'],
+};
 
 /** @implements {IntelligenceGateway} */
 export class DemoIntelligenceProvider {
@@ -207,7 +220,15 @@ export class DemoIntelligenceProvider {
     const e = ctx.estimates;
     const lower = (xs) => xs.map((x) => x.toLowerCase()).join(', ');
 
-    if (intent === 'how') return { answer: t('chat.a.how', { threshold: s.recurrence_threshold }), actions: s.status === 'idle' ? ['start'] : [] };
+    if (intent === 'how') return { answer: t('chat.a.how', { threshold: s.recurrence_threshold }), actions: s.status === 'idle' ? ['guide', 'start'] : [] };
+    if (intent === 'repeat') return { answer: t('chat.a.repeat', { threshold: s.recurrence_threshold }), actions: s.status === 'observing' && !d ? ['session'] : [] };
+    if (intent === 'next') {
+      if (s.status === 'idle') return { answer: t('chat.a.next_idle', { threshold: s.recurrence_threshold }), actions: ['guide', 'start', 'fastforward'] };
+      if (d) return { answer: t('chat.a.next_detected', { workflow: d.name, n: d.occurrences }), actions: ['metrics'] };
+      if (s.status === 'ended') return { answer: t('chat.a.next_ended'), actions: ['start'] };
+      const left = Math.max(1, s.recurrence_threshold - s.workflow_executions);
+      return { answer: t(s.workflow_executions ? 'chat.a.next_more' : 'chat.a.next_first', { done: s.workflow_executions, left, threshold: s.recurrence_threshold }), actions: ['session', 'fastforward'] };
+    }
     if (intent === 'about') {
       // The generic "what is Verídico" answer states nothing has been observed: only valid without a session.
       if (s.status === 'idle') return { answer: t('chat.a.about', { threshold: s.recurrence_threshold }), actions: ['start'] };
@@ -262,6 +283,8 @@ export class DemoIntelligenceProvider {
         };
       case 'focus':
         return { answer: t('chat.a.focus', { focus: lower(r.focus_areas) }), actions: ['recommendations'] };
+      case 'human':
+        return { answer: t('chat.a.human', { human: lower(r.human_steps), caps: lower(r.automatable_steps) }) + (r.exceptions_observed ? '\n\n' + t('chat.a.why_exceptions', { n: r.exceptions_observed }) : ''), actions: ['recommendations'] };
       case 'automate':
         return {
           answer: t('chat.a.automate_detected', { workflow: d.name, caps: lower(r.automatable_steps), human: lower(r.human_steps) }),

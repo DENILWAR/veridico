@@ -10,25 +10,67 @@ export class Desktop {
     this.z = 10;
   }
 
-  /** @param {{id, titleKey, title?, badgeStatus?, badgeKey?, icon, geometry:()=>{x,y,w,h}, mount:(body)=>void, onOpen?:()=>void}} app */
+  /**
+   * @param {{id, titleKey, title?, badgeStatus?, badgeKey?, icon (SVG markup), separatorBefore?,
+   *          geometry:()=>{x,y,w,h}, mount:(body)=>void, onOpen?:()=>void, dockAction?:()=>void}} app
+   */
   register(app) {
     this.apps.set(app.id, { ...app, win: null, open: false });
+    if (app.separatorBefore) {
+      const sep = document.createElement('span');
+      sep.className = 'dock-sep';
+      sep.setAttribute('aria-hidden', 'true');
+      this.dock.appendChild(sep);
+    }
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = 'dock-item';
+    b.className = `dock-item dock-${app.id}`;
     b.dataset.app = app.id;
-    b.innerHTML = `<span class="dock-ic" aria-hidden="true">${app.icon}</span><span class="dock-lbl"></span>`;
+    // Label is a visible tooltip on hover/focus; the accessible name comes from aria-label.
+    b.innerHTML = `<span class="dock-ic">${app.icon}</span><span class="dock-lbl" aria-hidden="true"></span><i class="dock-flag" aria-hidden="true"></i>`;
     b.addEventListener('click', () => (app.dockAction ? app.dockAction() : this.open(app.id)));
     this.dock.appendChild(b);
     this.relabel();
+  }
+
+  /** Toggle a state class on a dock item (e.g. 'has-new', 'active'). */
+  setFlag(id, cls, on) {
+    const b = this.dock.querySelector(`[data-app="${id}"]`);
+    if (b) b.classList.toggle(cls, !!on);
+  }
+
+  /**
+   * Minimize the dock after a quiet period. It expands when the pointer nears the bottom edge,
+   * on hover, keyboard focus or touch, and never minimizes while hovered or focused.
+   */
+  enableAutoHide(area, { idleMs = 4500 } = {}) {
+    const dock = this.dock;
+    let timer = null;
+    const schedule = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        if (dock.matches(':hover') || dock.contains(document.activeElement)) { schedule(); return; }
+        dock.classList.add('dock-min');
+      }, idleMs);
+    };
+    const expand = () => { dock.classList.remove('dock-min'); schedule(); };
+    area.addEventListener('pointermove', (e) => {
+      const r = area.getBoundingClientRect();
+      if (r.bottom - e.clientY < 120) expand();
+    });
+    dock.addEventListener('focusin', expand);
+    dock.addEventListener('pointerenter', expand);
+    dock.addEventListener('touchstart', expand, { passive: true });
+    schedule();
   }
 
   relabel() {
     this.apps.forEach((a) => {
       const b = this.dock.querySelector(`[data-app="${a.id}"]`);
       if (b) {
-        b.querySelector('.dock-lbl').textContent = a.title || t(a.titleKey);
-        b.setAttribute('aria-label', a.title || t(a.titleKey));
+        const label = a.title || t(a.titleKey);
+        b.querySelector('.dock-lbl').textContent = label;
+        b.setAttribute('aria-label', label);
       }
       if (a.win) {
         a.win.querySelector('.win-title').textContent = a.title || t(a.titleKey);
@@ -95,6 +137,7 @@ export class Desktop {
       const b = this.dock.querySelector(`[data-app="${a.id}"]`);
       if (b) b.classList.toggle('open', !!a.open);
     });
+    if (this.onChange) this.onChange();
   }
 
   drag(win, handle) {

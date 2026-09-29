@@ -39,18 +39,23 @@
   </header>
 
   <div class="xp-body">
+    <div class="xp-nav-slot">
     <nav class="xp-nav" id="xpNav" data-i18n-attr="aria-label:xp.nav_label">
-      <span class="nav-title">VERÍDICO INTELLIGENCE</span>
-      <button type="button" data-view="overview"><span data-i18n="nav.overview">Overview</span></button>
-      <button type="button" data-view="session"><span data-i18n="nav.session">Session</span><i class="nav-live" aria-hidden="true"></i></button>
-      <button type="button" data-view="workflows"><span data-i18n="nav.workflows">Workflows</span><i class="nav-new" aria-hidden="true"></i></button>
-      <button type="button" data-view="recommendations"><span data-i18n="nav.recommendations">Recommendations</span><i class="nav-new" aria-hidden="true"></i></button>
-      <button type="button" data-view="intelligence"><span data-i18n="nav.intelligence">Intelligence</span></button>
-      <button type="button" data-view="sources"><span data-i18n="nav.sources">Sources</span></button>
+      <div class="nav-head">
+        <span class="nav-title">VERÍDICO INTELLIGENCE</span>
+        <button type="button" class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="xpNav" data-i18n-attr="aria-label:xp.nav_toggle" data-icon="menu"></button>
+      </div>
+      <button type="button" data-view="overview" data-icon="overview"><span class="lbl" data-i18n="nav.overview">Overview</span></button>
+      <button type="button" data-view="session" data-icon="activity"><span class="lbl" data-i18n="nav.session">Session</span><i class="nav-live" aria-hidden="true"></i></button>
+      <button type="button" data-view="intelligence" data-icon="intelligence" class="nav-intel"><span class="lbl" data-i18n="nav.intelligence">Intelligence</span><i class="nav-new" aria-hidden="true"></i></button>
+      <button type="button" data-view="workflows" data-icon="workflows"><span class="lbl" data-i18n="nav.workflows">Workflows</span><i class="nav-new" aria-hidden="true"></i></button>
+      <button type="button" data-view="recommendations" data-icon="recommendations"><span class="lbl" data-i18n="nav.recommendations">Recommendations</span><i class="nav-new" aria-hidden="true"></i></button>
+      <button type="button" data-view="sources" data-icon="sources"><span class="lbl" data-i18n="nav.sources">Sources</span></button>
       <span class="nav-sep"></span>
-      <button type="button" data-view="summary"><span data-i18n="nav.summary">Session summary</span></button>
+      <button type="button" data-view="summary" data-icon="summary"><span class="lbl" data-i18n="nav.summary">Session summary</span></button>
       <div class="nav-foot" id="navFoot"></div>
     </nav>
+    </div>
 
     <main class="xp-main" id="xpMain" tabindex="-1">
       <section class="view" id="view-overview" data-view="overview"></section>
@@ -60,6 +65,9 @@
             <div class="desk-mark" aria-hidden="true"><span>SON Workspace</span><small class="badge" data-status="demo" data-i18n="xp.demo_env">Demo environment</small></div>
           </div>
           <nav class="dock" id="dock" data-i18n-attr="aria-label:xp.dock_label"></nav>
+          <div class="desk-tools" id="deskTools"></div>
+          <div class="guide-panel" id="guidePanel" hidden></div>
+          <div class="ff-banner" id="ffBanner" role="status" hidden></div>
           <div class="observer" id="observer"></div>
           <div class="moment" id="moment" hidden></div>
           <div class="desk-gate" id="deskGate" hidden></div>
@@ -73,5 +81,7 @@
       <section class="view" id="view-summary" data-view="summary"></section>
     </main>
   </div>
+
+  <div class="xp-dialog" id="xpDialog" hidden></div>
 </body>
 </html>
