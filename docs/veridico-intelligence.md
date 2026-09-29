@@ -103,3 +103,18 @@ Richer animations, more workflows (e.g. document requests, approvals), an Overvi
 - **Advanced ML:** learned similarity, anomaly and exception detection, confidence calibration.
 - **Autonomous execution:** approved workflows executed by Verídico, with human checkpoints and rollback.
 - **Billing:** licence plus Intelligence Capacity metering.
+
+## Demo UX (Intelligence tabs, guidance, fast-forward)
+
+- **Verídico Intelligence** has two tabs.
+  - **Metrics** reuses the existing summary tiles, workflow reconstruction and recommendation fragments (same computations), each with "Ask about this" shortcuts.
+  - **Chat** is the conversational interface.
+- **One flow:** `askVeridico()` in `assets/js/demo/app.js` is used by the chat composer, quick prompts, `?q=`, The Moment ("Ask Verídico about this workflow"), Metrics shortcuts and guidance actions. It always goes through `VeridicoIntelligenceClient` with `buildIntelligenceContext()`.
+- **Guidance is deterministic** (`guidanceLine()`, `currentGuide()`): demo state decides next steps and highlights; the LLM only explains.
+  - "Guide me" is optional, dismissible and never blocks the UI.
+- **DEMO FAST-FORWARD** (`ordr.simulate()`) drives the remaining invoices through ORDR's own action paths.
+  - The same `session.record()` → executions → detector pipeline runs; nothing writes a detection directly.
+  - Events carry `demo_generated: true`, executions `demoGenerated`, and the context sends `demo_generated` / `demo_generated_executions`.
+  - Fast-forwarded executions are labelled "Demo fast-forward" in The Moment, the observer, Workflows and the Summary.
+- **Provider details are hidden.** `deterministic-demo`, `request_id` and state appear only with `?debug=1`.
+- **Chat history** stays in the browser. Each request sends only the current question plus the current context; no conversation history goes to SON Intelligence.
