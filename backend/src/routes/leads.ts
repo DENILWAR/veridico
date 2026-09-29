@@ -5,9 +5,9 @@ import { LeadRequestSchema } from '../schemas/leads.js';
 // LEADS_WEBHOOK_URL set   → forward the validated lead; { accepted: true }.
 // LEADS_WEBHOOK_URL unset → { accepted: false, fallback: true } so the UI offers the email alternative.
 // Leads are never "stored" in logs; only non-personal outcome lines are logged.
-export function leadsRoutes(webhookUrl: string | undefined, fetchImpl: typeof fetch = fetch) {
+export function leadsRoutes(webhookUrl: string | undefined, fetchImpl: typeof fetch = fetch, perMinute = 5) {
   return async function (app: FastifyInstance) {
-    app.post('/api/leads', async (req, reply) => {
+    app.post('/api/leads', { config: { rateLimit: { max: perMinute, timeWindow: '1 minute' } } }, async (req, reply) => {
       reply.header('Cache-Control', 'no-store');
       const lead = LeadRequestSchema.parse(req.body);
 

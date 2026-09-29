@@ -22,12 +22,14 @@ export const IntelligenceContextSchema = z.object({
     workflow_executions: z.number().int().min(0).max(10000),
     recurrence_threshold: z.number().int().min(1).max(100),
     duration_seconds: z.number().min(0).max(1e7),
+    demo_generated_executions: z.number().int().min(0).max(10000).optional(),
   }),
   executions: z.array(z.object({
     id: z.number().int().min(0),
     invoice_id: z.string().max(40).nullable(),
     actions: z.number().int().min(0).max(10000),
     duration_seconds: z.number().min(0).max(1e7),
+    demo_generated: z.boolean().optional(),   // executed by DEMO FAST-FORWARD, not by the visitor
   })).max(50),
   workflow: z.object({
     key: z.string().max(60),
@@ -66,12 +68,14 @@ export const IntelligenceContextSchema = z.object({
 
 export type IntelligenceContext = z.infer<typeof IntelligenceContextSchema>;
 
+// Strict: model, provider, system_prompt, instructions, tools, temperature… are rejected (400).
+// The context is data for SON Intelligence, never instructions.
 export const IntelligenceRequestSchema = z.object({
   question: z.string().trim().min(1).max(2000),
   lang: z.enum(['en', 'es', 'de']).default('en'),
   session_id: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/).optional(),
   context: IntelligenceContextSchema,
-});
+}).strict();
 
 export type IntelligenceRequest = z.infer<typeof IntelligenceRequestSchema>;
 
@@ -81,5 +85,5 @@ export interface IntelligenceResponse {
   provider: 'son-intelligence' | 'deterministic-demo';
   request_id: string;
   fallback?: true;
-  fallback_reason?: 'not_configured' | 'timeout' | 'unavailable' | 'bad_response';
+  fallback_reason?: 'not_configured' | 'timeout' | 'unavailable' | 'bad_response' | 'budget_exhausted';
 }

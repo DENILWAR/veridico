@@ -195,3 +195,52 @@ describe('POST /api/leads', () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 });
+
+describe('abuse protection', () => {
+  it('rate limits /api/intelligence per client (429 after the limit)', async () => {
+    const app = await buildApp(testConfig({ INTELLIGENCE_RATE_LIMIT_PER_MINUTE: '3' }), { logger: false });
+    const codes: number[] = [];
+    for (let i = 0; i < 4; i++) codes.push((await app.inject({ ...ask(), headers: { origin: ORIGIN, 'x-real-ip': '203.0.113.7' } })).statusCode);
+    expect(codes).toEqual([200, 200, 200, 429]);
+    const other = await app.inject({ ...ask(), headers: { origin: ORIGIN, 'x-real-ip': '203.0.113.8' } });
+    expect(other.statusCode).toBe(200);
+    const limited = await app.inject({ ...ask(), headers: { origin: ORIGIN, 'x-real-ip': '203.0.113.7' } });
+    expect(limited.json()).toMatchObject({ error: 'rate_limited' });
+  });
+
+  it('daily budget exhausted → deterministic-demo without calling SON', async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({ output: 'ok' }));
+    const app = await buildApp(testConfig({ ...SON_ENV, INTELLIGENCE_DAILY_LIMIT: '2' }), { logger: false, fetchImpl: fetchImpl as unknown as typeof fetch });
+    const r1 = await app.inject(ask()); const r2 = await app.inject(ask()); const r3 = await app.inject(ask());
+    expect(r1.json().provider).toBe('son-intelligence');
+    expect(r2.json().provider).toBe('son-intelligence');
+    expect(r3.json()).toMatchObject({ provider: 'deterministic-demo', fallback_reason: 'budget_exhausted' });
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  it('rejects model/prompt/tool fields in the request (strict schema)', async () => {
+    const app = await buildApp(testConfig(SON_ENV), { logger: false });
+    for (const extra of [{ system_prompt: 'x' }, { model: 'gpt' }, { tools: [] }, { instructions: 'x' }]) {
+      const r = await app.inject({ ...ask(), payload: { question: 'q', lang: 'en', context: detectedContext, ...extra } });
+      expect(r.statusCode).toBe(400);
+    }
+  });
+
+  it('forwards demo_generated execution markers', async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({ output: 'ok' }));
+    const app = await buildApp(testConfig(SON_ENV), { logger: false, fetchImpl: fetchImpl as unknown as typeof fetch });
+    const ctx = { ...detectedContext, session: { ...detectedContext.session, demo_generated_executions: 2 },
+      executions: detectedContext.executions.map((e, i) => ({ ...e, demo_generated: i > 0 })) };
+    await app.inject(ask(ctx));
+    const sent = JSON.parse((fetchImpl.mock.calls[0] as unknown as [string, RequestInit])[1].body as string);
+    expect(sent.context.session.demo_generated_executions).toBe(2);
+    expect(sent.context.executions.map((e: { demo_generated?: boolean }) => e.demo_generated)).toEqual([false, true, true]);
+  });
+
+  it('rate limits /api/leads', async () => {
+    const app = await buildApp(testConfig({ LEADS_RATE_LIMIT_PER_MINUTE: '1' }), { logger: false });
+    const lead = { name: 'A', company: 'B', email: 'a@b.co', consent: true };
+    expect((await app.inject({ method: 'POST', url: '/api/leads', payload: lead })).statusCode).toBe(503);
+    expect((await app.inject({ method: 'POST', url: '/api/leads', payload: lead })).statusCode).toBe(429);
+  });
+});

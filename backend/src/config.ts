@@ -12,6 +12,9 @@ const EnvSchema = z.object({
   ALLOWED_ORIGINS: z.string().default(''),
   LEADS_WEBHOOK_URL: z.string().url().optional().or(z.literal('').transform(() => undefined)),
   BODY_LIMIT_BYTES: z.coerce.number().int().min(1024).max(1024 * 1024).default(64 * 1024),
+  INTELLIGENCE_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(1000).default(20),
+  INTELLIGENCE_DAILY_LIMIT: z.coerce.number().int().min(1).max(1_000_000).default(2000),
+  LEADS_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(1000).default(5),
 });
 
 export interface Config {
@@ -22,6 +25,7 @@ export interface Config {
   allowedOrigins: string[];
   leadsWebhookUrl?: string;
   bodyLimitBytes: number;
+  limits: { intelligencePerMinute: number; intelligencePerDay: number; leadsPerMinute: number };
 }
 
 function normalizeOrigin(o: string): string {
@@ -54,6 +58,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     allowedOrigins,
     leadsWebhookUrl: e.LEADS_WEBHOOK_URL,
     bodyLimitBytes: e.BODY_LIMIT_BYTES,
+    limits: {
+      intelligencePerMinute: e.INTELLIGENCE_RATE_LIMIT_PER_MINUTE,
+      intelligencePerDay: e.INTELLIGENCE_DAILY_LIMIT,
+      leadsPerMinute: e.LEADS_RATE_LIMIT_PER_MINUTE,
+    },
   };
 }
 

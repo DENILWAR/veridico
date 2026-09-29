@@ -3,6 +3,7 @@ import { ZodError } from 'zod';
 import { sonConfigured, type Config } from './config.js';
 import { registerCors } from './security/cors.js';
 import { registerSecurityHeaders } from './security/headers.js';
+import { registerRateLimit, DailyBudget } from './security/rate-limit.js';
 import { SonIntelligenceClient } from './intelligence/son-intelligence-client.js';
 import { healthRoutes } from './routes/health.js';
 import { readyRoutes } from './routes/ready.js';
@@ -27,6 +28,7 @@ export async function buildApp(config: Config, deps: AppDeps = {}): Promise<Fast
 
   registerSecurityHeaders(app, config.isProduction);
   await registerCors(app, config.allowedOrigins);
+  await registerRateLimit(app);
 
   app.setErrorHandler((err: Error & { statusCode?: number }, req, reply) => {
     if (err instanceof ZodError) {
@@ -34,6 +36,7 @@ export async function buildApp(config: Config, deps: AppDeps = {}): Promise<Fast
       return;
     }
     const status = err.statusCode ?? 500;
+    if (status === 429) { reply.code(429).send(err); return; }
     if (status >= 500) req.log.error({ err: err.message }, 'unhandled error');
     const code = status === 413 ? 'payload_too_large' : status === 415 ? 'unsupported_media_type' : status < 500 ? 'bad_request' : 'internal_error';
     // Production errors never include stack traces or internal messages.
@@ -52,7 +55,7 @@ export async function buildApp(config: Config, deps: AppDeps = {}): Promise<Fast
 
   await app.register(healthRoutes);
   await app.register(readyRoutes(config));
-  await app.register(intelligenceRoutes(son));
-  await app.register(leadsRoutes(config.leadsWebhookUrl, deps.fetchImpl ?? fetch));
+  await app.register(intelligenceRoutes(son, { perMinute: config.limits.intelligencePerMinute, budget: new DailyBudget(config.limits.intelligencePerDay) }));
+  await app.register(leadsRoutes(config.leadsWebhookUrl, deps.fetchImpl ?? fetch, config.limits.leadsPerMinute));
   return app;
 }

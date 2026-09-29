@@ -42,10 +42,14 @@ See `.env.example`.
 | `LEADS_WEBHOOK_URL` | optional | Where leads are forwarded. Unset → `{ accepted: false, fallback: true }` |
 | `SON_INTELLIGENCE_TIMEOUT_MS` | optional | Default `10000` |
 | `BODY_LIMIT_BYTES` | optional | Default `65536`. Larger bodies → 413. |
+| `INTELLIGENCE_RATE_LIMIT_PER_MINUTE` | optional | Default `20` per client (X-Real-IP, else socket IP) → 429; the UI then answers with deterministic-demo |
+| `INTELLIGENCE_DAILY_LIMIT` | optional | Default `2000` SON calls per UTC day (global, in memory, resets on restart) → deterministic-demo directive |
+| `LEADS_RATE_LIMIT_PER_MINUTE` | optional | Default `5` per client → 429 |
 
 ## Security
 
-- Zod validation on every body; unknown context fields are stripped.
+- Zod validation on every body; unknown context fields are stripped; unknown top-level fields (`model`, `system_prompt`, `tools`, `instructions`…) are rejected with 400. The context is forwarded as data, never as instructions.
+- Rate limits (`@fastify/rate-limit`, in memory) on `/api/intelligence` and `/api/leads`, plus a global daily budget for SON Intelligence calls.
 - Body limit; explicit CORS allow-list; `Cache-Control: no-store` on the API routes.
 - Basic security headers (nosniff, DENY, CSP `default-src 'none'`, HSTS in production).
 - Production errors carry no stack traces or messages.
